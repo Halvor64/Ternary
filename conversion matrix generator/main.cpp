@@ -9,7 +9,7 @@ using namespace std;
 vector<int> input; //binary inputs 
 vector<int> all_one_ternary;
 vector<int> output; // ternary outputs
-//vector<int> matrix; // HOW TO MAKE A 2D VECTOR
+//vector<int> matrix; //2D vector
 int matrix[128][82];
 
 int getValue(string prompt, int low, int high) {	// gets a value (int) between low and high and returns it
@@ -30,7 +30,7 @@ int getValue(string prompt, int low, int high) {	// gets a value (int) between l
 
 void setOutput(int bits) {
 	int trits = ceil(bits / 1.585);
-	uint64_t decimal = 0;				// GO DIRECTLY FROM UNSIGNED TO BALANCED, NO NEED FOR DECIMAL MIDDLE STEP
+	uint64_t decimal = 0;				
 	for (int i = 0; i < bits; i++) {
 		decimal += ((1 << i) * (!input[i]));
 	}
@@ -74,12 +74,12 @@ int main() {
 
 		int bits = getValue("enter number of binary inputs (0 - 64): ", 0, 64);
 		int trits = ceil(bits / 1.585); //a trit can replace 1.58496 bits
-		//NOTE: It is advisable to use one output trit more than the number of trits in the matrix.
+		//NOTE: In implementation, it is advisable to use one output trit more than the number of trits in the matrix.
 		// The most significant bit can have a positive overflow
 		// this is due to the fact that 2 trit balaced ternary can count from -4 to +4, 
 		// while 2 trit unsigned can count from 0 to 8.
 		// so while the number of trits defined above are enough for the matrix, it might sometimes not be enough for some specific outputs.
-		// for some data sizes, the overhead might cause this positive overflow to never happen. (maybe)
+		// for some data sizes, the overhead might cause this positive overflow to never happen. 
 
 		// reserving vector space and setting contents to 0
 		output.reserve(trits);
@@ -126,7 +126,6 @@ int main() {
 		}
 
 		for (int j = 0; j < trits; j++) {
-			//////////////////////////////////////// this is the bad way of doing this
 			for (int i = bits - 1; i > -1; i--) {
 				if (matrix[i][j] == -2) {
 					matrix[i][j] = 1;
