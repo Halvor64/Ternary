@@ -1,5 +1,6 @@
 // Conversion matrix generator for binary and ternary
-// Author: Halvor NybÃ¸ Risto
+// Author: Halvor Nybø Risto
+// Date: 4. Dec 2019
 // This program uses two different methods for generating the conversion matrices.
 // For binary to ternary, a method nicknamed the "input bit-flipping method" is implemented.
 // This method was use to demonstrate that it can be done in this way.
@@ -17,8 +18,8 @@ vector<int> all_one_ternary;
 vector<int> output; // ternary outputs
 					//vector<int> matrix; //2D vector
 // matrices are larger than 64 bit / 41 trit and therefore do not need a dynamic size
-int binToTerMatrix[128][82]; // binary to ternary 
-int terToBinMatrix[82][128]; // ternary to binary
+int binToTerMatrix[128][128]; // binary to ternary 
+int terToBinMatrix[128][128]; // ternary to binary
 int bits = 0;
 int trits = 0;
 int getValue(string prompt, int low, int high) {	// gets a value (int) between low and high and returns it
@@ -37,6 +38,17 @@ int getValue(string prompt, int low, int high) {	// gets a value (int) between l
 }
 
 
+
+
+uint64_t pow64_t(int number, int exponent) {
+	uint64_t result = 1;
+
+	for (int i = 0; i < exponent; i++) {
+		result *= number;
+	}
+
+	return result;
+}
 void setOutput(int bits) {
 	int trits = ceil(bits / 1.585);
 	uint64_t decimal = 0;
@@ -66,8 +78,6 @@ void setAllOneTernary(int bits) {	//sets the all_one_ternary to the balanced ter
 	for (int i = 0; i < trits; i++) valueZero += pow(3, i);
 	decimal = decimal + valueZero; // in balanced ternary, all middle value = 0. Therefore an offset is added
 
-
-
 	for (int i = 0; i < trits; i++) {
 		all_one_ternary[i] = ((decimal % 3) - 1); // -1 to get the correct balanced ternary notation
 		decimal = decimal / 3;
@@ -79,9 +89,13 @@ void setAllOneTernary(int bits) {	//sets the all_one_ternary to the balanced ter
 int main() {
 	while (true) {
 		if (getValue("Select a converter\n1. Binary to ternary\n2. Ternary to binary\n>", 1, 2) == 1) { // binary to ternary
+			
+
+			// overcomplicated method (stops working after 31 bits)
+			/*
 			bits = getValue("enter number of binary inputs (0 - 64): ", 0, 64);
 			trits = ceil(bits / 1.585); //a trit can replace 1.58496 bits
-											
+
 			cout << "\n";
 
 			// reserving vector space and setting contents to 0
@@ -169,42 +183,142 @@ int main() {
 
 
 
-			/*
-			cout << "all_one_ternary: " << "\n";
-			for (int i = 0 ; i < trits; ++i) {
-			int & foobar = all_one_ternary[i];
-			cout << foobar << "\n";
-			}
-			cout << "\n\n";
-			*/
+			
+			//cout << "all_one_ternary: " << "\n";
+			//for (int i = 0 ; i < trits; ++i) {
+			//int & foobar = all_one_ternary[i];
+			//cout << foobar << "\n";
+			//}
+			//cout << "\n\n";
+			
 
 			cout << "\n\n\n";
 
 			output.clear();
 			input.clear();
 			all_one_ternary.clear();
-		}
-		else {	// ternary to binary
+			*/
+
 			
 			bits = getValue("enter number of binary outputs (0 - 64): ", 0, 64);
 			trits = ceil(bits / 1.585); //a trit can replace 1.58496 bits
-			vector<int> ternaryExponents;
-			ternaryExponents.reserve(trits);
-			for (int i = 0; i < trits + 1; i++) {
-				ternaryExponents.push_back(pow(3,i));
-			}
-			cout << "\n\n";
-			
+
+
+			// step one: Convert the decimal value of the binary exponents to unbalanced ternary
+			// step two: Convert the unbalanced ternary to balanced ternary
 
 			
-			for (int m = 0; m < trits; m++) {
-				for (int n = 0; n < bits; n++) {
-					binToTerMatrix[trits - m - 1][bits - n - 1] = ternaryExponents[m] % 2;
-					ternaryExponents[m] = ternaryExponents[m] / 2;
+			vector<uint64_t> binaryExponents;
+			binaryExponents.reserve(bits);
+			for (int i = 0; i < bits + 1; i++) {
+				binaryExponents.push_back(pow64_t(2, i));
+			}
+			cout << "\n\n";
+
+
+			for (int n = 0; n < bits; n++) {		// fill the matrix with unsigned ternary
+				//cout << "\nbinary exponent: " << binaryExponents[n] << endl;
+				for (int m = 0; m < trits; m++) {
+					//cout << binaryExponents[n] % 3;
+					binToTerMatrix[n][trits - 1 - m] = binaryExponents[n] % 3;
+					binaryExponents[n] = binaryExponents[n] / 3;
 				}
 			}
 
+			cout << "\n\nunsigned: \n";
+			for (int n = 0; n < bits; n++) {		// print the content of matrix
+				cout << "\n";
+				for (int m = 0; m < trits; m++) {
+					cout << binToTerMatrix[n][m];
 
+				}
+			}
+			cout << "\n\n\n";
+/*
+			for (int n = 0; n < bits; n++) {
+				for (int m = trits-1; m > -1; m--) {
+					while (binToTerMatrix[n][m] > 1) {
+						binToTerMatrix[n][m] -= 1;
+						binToTerMatrix[n][m - 1] += 1;
+						if (binToTerMatrix[n][m] == 1) {
+							binToTerMatrix[n][m] = -1;
+						}
+					}
+				}
+			}
+			
+*/			//converting from unsigned to balanced
+			for (int i = 0; i < bits; i++) { // repeat to ensure there are no leftover 2's
+				for (int n = 0; n < bits; n++) {
+					for (int m = 0; m < trits; m++) {
+						while (binToTerMatrix[n][m] > 1) {
+							binToTerMatrix[n][m] -= 1;
+							binToTerMatrix[n][m - 1] += 1;
+							if (binToTerMatrix[n][m] == 1) {
+								binToTerMatrix[n][m] = -1;
+							}
+						}
+					}
+				}
+			}
+			
+
+
+			cout << "\n\nBalanced: \n";
+			
+			
+			for (int n = 0; n < bits; n++) {		// print the content of matrix
+				cout << "\n";
+				for (int m = 0; m < trits; m++) {
+					if (binToTerMatrix[n][m] == -1) cout << "-   ";
+					else if (binToTerMatrix[n][m] == +1) cout << "+   ";
+					else if (binToTerMatrix[n][m] == 0) cout << "0   ";
+					else cout << binToTerMatrix[n][m] << "   ";
+				}
+			}
+			cout << "\n\n\n";
+			
+			
+
+
+			cout << "    ";
+			for (int i = 0; i < bits; i++) {
+				cout << "b" << bits - 1 - i << " ";
+				if (i < 10) cout << " ";
+			}
+			cout << "\n";
+			for (int j = trits-1; j > -1; j--) {
+				cout << "\nt" << trits - 1 - j << "= ";
+				if (trits - 1 - j < 10) cout << " ";
+				for (int i = bits - 1; i > -1; i--) {
+					if (binToTerMatrix[i][j] == -1) cout << "-   ";
+					if (binToTerMatrix[i][j] == +1) cout << "+   ";
+					if (binToTerMatrix[i][j] == 0) cout << "0   ";
+				}
+				cout << "\n";
+			}
+
+
+		}
+		else {	// ternary to binary ======================================================
+
+			bits = getValue("enter number of binary outputs (0 - 64): ", 0, 64);
+			trits = ceil(bits / 1.585); //a trit can replace 1.58496 bits
+			vector<uint64_t> ternaryExponents;
+			ternaryExponents.reserve(trits);
+			for (int i = 0; i < trits + 1; i++) {
+				ternaryExponents.push_back(pow64_t(3, i));
+			}
+			cout << "\n\n";
+
+
+
+			for (int m = 0; m < trits; m++) {
+				for (int n = 0; n < bits; n++) {
+					terToBinMatrix[trits - m - 1][bits - n - 1] = ternaryExponents[m] % 2;
+					ternaryExponents[m] = ternaryExponents[m] / 2;
+				}
+			}
 
 			cout << "    ";
 			for (int m = 0; m < trits; m++) {
@@ -212,18 +326,18 @@ int main() {
 				if (m < 10) cout << " ";
 			}
 			cout << "\n";
-			for (int n = bits -1; n > -1; n--) {
-				cout << "b" << 15 - n << "= ";
-				if ((15 - n) < 10) cout << " ";
+			for (int n = bits - 1; n > -1; n--) {
+				cout << "b" << bits - 1 - n << "= ";
+				if ((bits - 1 - n) < 10) cout << " ";
 				for (int m = 0; m < trits; m++) {
-					cout << binToTerMatrix[m][n]; 
+					cout << terToBinMatrix[m][n];
 					if (m < trits - 1) cout << " + ";
 				}
 				cout << "\n";
 			}
 			cout << "\n\n\n";
 		}
-		
+
 
 
 	}
