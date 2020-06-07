@@ -801,8 +801,7 @@ int main() {
 		//blue = 1.487nm, covers two from the side
 		// p-type from left and top
 		// n-type from right and bottom
-		// ARE INVERTED INPUTS NECESSARY??? (you only need to invert the inputs once)
-		// inverted inputs can help! if there only a middle value, it can turn one of the sides into something useful...
+		
 
 		int function_index = 1234;
 		
@@ -1520,26 +1519,15 @@ int main() {
 
 	}
 
-	// reasons this is not fully optimal:
-	// example:
-	// 100
-	// 000
-	// 1X0
-	//		1x1 group is better than 2x1 group. (shared "A" transistor)
-	//
-	// 110
-	// 000
-	// 1X0
-	//		1x2 group is better than 1x1 group. (shared "A" transistor)
-	// IDEA! WRAPPING!!!
-
-
-
-	// for circuit generation, shared transistors must be implemented
-	// ONE BRANCH CAN ONLY SHARE A SINGLE TRANSISTOR
-	// VDDGND and HALFVDD should also be able to share transistors!
-	// with wrapping it is no longer a problem
-	// but wrapping does not ensure transistor sharing between networks!
+	// thoughts and notes:
+	// Group wrapping does not ensure transistor sharing between networks!
+	// Are p-buffers and n-buffers useful? maybe for single middle values.
+	// Any n-input 1-output functions can be done with this method, using n-dimensional rectangular grouping
+	// .. is it less optimal as n goes up?
+	// Add function index functionality
+	// Add write-to-file functionality 
+	// Think about higher functions. How are they made with 2i 1o functions?
+	// How does function indexing relate to subfunctions and their connections?
 
 
 	return 0;
