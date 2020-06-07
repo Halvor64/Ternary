@@ -805,7 +805,7 @@ int main() {
 
 		int function_index = 1234;
 		
-		int transistors = 2; //n type and p type!!
+		int transistors = 2; 
 		
 		string n0 = " ntype 1.018nm";
 		string n1 = " ntype 0.783nm";
@@ -1524,6 +1524,7 @@ int main() {
 	// Are p-buffers and n-buffers useful? maybe for single middle values.
 	// Any n-input 1-output functions can be done with this method, using n-dimensional rectangular grouping
 	// .. is it less optimal as n goes up?
+	// change int transistors to ntype and ptype counters
 	// Add function index functionality
 	// Add write-to-file functionality 
 	// Think about higher functions. How are they made with 2i 1o functions?
