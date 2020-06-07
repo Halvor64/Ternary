@@ -38,7 +38,9 @@ char backup3[3][3];
 
 bool group[4][48];
 
-bool rwGroup(int index, int array, char c, char rw) {
+bool rwGroup(int index, int array, char c, char rw) { //this function reads or writes to the 3x3 arrays. 
+// In read mode, it will look for c in the specified grouping, and return true if it is found.
+// In write mode, it will write c to the specified grouping. Write mode returns false.
 	bool result = false;
 
 	char m[3][3] = { '0','0','0','0','0','0','0','0','0' };
@@ -64,8 +66,9 @@ bool rwGroup(int index, int array, char c, char rw) {
 	}
 
 	////////////////////////////////////////
-	//THE INDEXES SHOULD BE ORDERED IN TERMS OF NUMBER OF TRANSISTORS REQUIRED!!
-	//3x3
+	// The indexes are ordered in terms of size.
+	// (should they be ordered in terms of transistors per value?)
+	
 	if (index == 0) {
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
