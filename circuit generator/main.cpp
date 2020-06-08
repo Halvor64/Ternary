@@ -1,6 +1,8 @@
 using namespace std;
 #include <iostream>;
-
+#include <math.h>       /* pow */
+#include <fstream>
+#include <string>
 char matrix[3][3] = {
 					0, 0, 0,
 					0, 0, 0,
@@ -68,7 +70,7 @@ bool rwGroup(int index, int array, char c, char rw) { //this function reads or w
 	////////////////////////////////////////
 	// The indexes are ordered in terms of size.
 	// (should they be ordered in terms of transistors per value?)
-	
+
 	if (index == 0) {
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
@@ -211,7 +213,7 @@ bool rwGroup(int index, int array, char c, char rw) { //this function reads or w
 
 	// 2x2 wrapping (4)
 
-	
+
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 3; j = j + 2) {
 			if (index == 9) {
@@ -224,13 +226,13 @@ bool rwGroup(int index, int array, char c, char rw) { //this function reads or w
 			}
 			if (index == 10) {
 				if (rw == 'r') {
-					if (m[i+1][j] == c) result = true;
+					if (m[i + 1][j] == c) result = true;
 				}
 				else {
-					m[i+1][j] = c;
+					m[i + 1][j] = c;
 				}
 			}
-			
+
 
 		}
 	}
@@ -247,15 +249,15 @@ bool rwGroup(int index, int array, char c, char rw) { //this function reads or w
 			}
 			if (index == 12) {
 				if (rw == 'r') {
-					if (m[j][i+1] == c) result = true;
+					if (m[j][i + 1] == c) result = true;
 				}
 				else {
-					m[j][i+1] = c;
+					m[j][i + 1] = c;
 				}
 			}
 		}
 	}
-	
+
 
 
 	// 1x3 grouping: (6)
@@ -425,7 +427,7 @@ bool rwGroup(int index, int array, char c, char rw) { //this function reads or w
 
 	// 1x2 wrapping (6)
 
-	for (int i = 0; i < 3; i=i+2) {
+	for (int i = 0; i < 3; i = i + 2) {
 		if (index == 31) {
 			if (rw == 'r') {
 				if (m[i][0] == c) result = true;
@@ -603,9 +605,18 @@ int main() {
 			cout << endl;
 		}
 
+		
+
+
 		//magic
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
+				if (matrix[i][j] == 'x') {
+					upvddgnd[i][j] = 'x';
+					downvddgnd[i][j] = 'x';
+					uphalfvdd[i][j] = 'x';
+					downhalfvdd[i][j] = 'x';
+				}
 				if (matrix[i][j] == '0') {
 					upvddgnd[i][j] = '0';
 					downvddgnd[i][j] = '1';
@@ -716,7 +727,7 @@ int main() {
 				if (group[i][j] == true) {
 					// go through again and mark all the other ones except this one
 					rwGroup(0, 9, '0', 'w'); // sets whole array to 0
-					
+
 					for (int k = 0; k < 48; k++) {
 						if (group[i][k] == true) {
 							if (k != j) {
@@ -783,7 +794,8 @@ int main() {
 			for (int i = 0; i < 48; i++) {
 				if (group[n][i] == true) {
 					rwGroup(0, 9, '0', 'w');
-					rwGroup(i, 9, 'Z', 'w');
+					rwGroup(i, 9, '1', 'w');
+					rwGroup(i, n, '1', 'w'); //for reconstruction purposes
 					cout << i << ": \n";
 					for (int j = 0; j < 3; j++) {
 						for (int k = 0; k < 3; k++) {
@@ -796,17 +808,62 @@ int main() {
 		}
 
 
+		
+
+		cout << "\n\n true circuit truthtable: \n";
+
+		int function_index = 0;
+		// The true circuit truthtable is reconstructed (with no x)
+		rwGroup(0, 9, '0', 'w');
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				if (uphalfvdd[i][j] == downhalfvdd[i][j]) {
+					matrix[i][j] = uphalfvdd[i][i];
+				}
+				if (upvddgnd[i][j] == '1') {
+					matrix[i][j] = '2';
+				}
+				if (downvddgnd[i][j] == '1') {
+					matrix[i][j] = '0';
+				}
+
+
+				cout << matrix[i][j] << " ";
+				if (matrix[i][j] == '1'){
+					function_index += int(pow(3,(3*i + j)));
+				}
+				if (matrix[i][j] == '2') {
+					function_index += int(2*pow(3, (3 * i + j)));
+				}
+
+			}
+			cout << endl;
+		}
+		cout << "function index: " << function_index;
+		cout << "\n\n";
+
+		
+
+		/////
+
+
+
+		string filename = "f_";
+		for (int i = 0; i < 5 - to_string(function_index).length(); i++) { filename += "0"; }
+		filename += to_string(function_index);
+		filename += ".sp";
+		ofstream myfile;
+		myfile.open(filename);
+
 
 		//red = 0.783nm, covers one from the side
 		//blue = 1.487nm, covers two from the side
 		// p-type from left and top
 		// n-type from right and bottom
+
+
 		
 
-		int function_index = 1234;
-		
-		int transistors = 2; 
-		
 		string n0 = " ntype 1.018nm";
 		string n1 = " ntype 0.783nm";
 		string n2 = " ntype 1.487nm";
@@ -815,88 +872,93 @@ int main() {
 		string p2 = " ptype 1.487nm";
 		string out = "";
 
+		
+		
+		
+
+
 		cout << ".subckt f" << function_index << " a b out vdd\n";
 		cout << "\n\nxp0 up out out" << p0;
 		cout << "\nxn0 out out down" << n0;
 		int connections = 0;
+		int transistors = 2;
 
 		for (int i = 0; i < 4; i++) {
 
 			if (i == 0) {
 				cout << "\n******** UpVddGnd ********\n\n";
 				out = "out";
-			} 
+			}
 			if (i == 1) {
 				cout << "\n******** DownVddGnd ********";
 				out = "out";
-			} 
+			}
 			if (i == 2) {
 				cout << "\n******** UpHalfVdd ********";
 				out = "up";
-			} 
-			
+			}
+
 			if (i == 3) {
 				cout << "\n******** DownHalfVdd ********";
 				out = "down";
 			}
 
-			
+
 
 			if (group[i][0]) {
-				
-				
-				cout << "\n *NO TRANSISTORS, DIRECT CONNECTION\n\n";
-				if (i % 2 == 0) cout << "Vs out vdd 0"; else cout << "Vs out gnd 0";  //out is different for vdd/2
+
+				cout << "\n *DIRECT CONNECTION \n\n";
+				cout << "Vs " << out;
+				if (i % 2 == 0) cout << " vdd 0"; else cout << " gnd 0";  
 			}
 			if (group[i][1]) {
-				
-				
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " b " << out << p2 <<"\n";
+				cout << " b " << out << p2 << "\n";
 				transistors += 1;
-				
+
 			}
 			if (group[i][2]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b " << out << n2 << "\n";
 				transistors += 1;
 			}
 			if (group[i][3]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a " << out << p2 << "\n";
 				transistors += 1;
 			}
 			if (group[i][4]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a " << out << n2 << "\n";
 				transistors += 1;
 			}
 			if (group[i][5]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " a p"<<connections << p2 << "\n";
+				cout << " a p" << connections << p2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout << " p"<< connections << " b " << out << p2 << "\n";
+				cout << " p" << connections << " b " << out << p2 << "\n";
 				transistors += 1;
 				connections += 1;
 			}
 			if (group[i][6]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p2 << "\n";
@@ -908,8 +970,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][7]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
@@ -921,8 +983,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][8]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
@@ -934,15 +996,15 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][9]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout << " p" << connections << " a "<< out << p1 << "\n";
+				cout << " p" << connections << " a " << out << p1 << "\n";
 				transistors += 1;
 
 				cout << "\nxn" << transistors;
@@ -952,15 +1014,15 @@ int main() {
 
 			}
 			if (group[i][10]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout << " p" << connections << " a p"<<connections+1 << p1 << "\n";
+				cout << " p" << connections << " a p" << connections + 1 << p1 << "\n";
 				transistors += 1;
 
 				cout << "\nxn" << transistors;
@@ -969,8 +1031,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][11]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p2 << "\n";
@@ -986,8 +1048,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][12]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
@@ -1005,8 +1067,8 @@ int main() {
 
 
 			if (group[i][13]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b " << out << p1 << "\n";
@@ -1014,8 +1076,8 @@ int main() {
 
 			}
 			if (group[i][14]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n2 << "\n";
@@ -1027,24 +1089,24 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][15]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b " << out << n1 << "\n";
 				transistors += 1;
 			}
 			if (group[i][16]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a " << out << p1 << "\n";
 				transistors += 1;
 			}
 			if (group[i][17]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
@@ -1056,19 +1118,19 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][18]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a " << out << n1 << "\n";
 				transistors += 1;
 			}
 			if (group[i][19]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " a p"<<connections << p2 << "\n";
+				cout << " a p" << connections << p2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
@@ -1078,43 +1140,43 @@ int main() {
 
 			}
 			if (group[i][20]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout << " p" << connections << " b p"<<connections+1 << p2 << "\n";
+				cout << " p" << connections << " b p" << connections + 1 << p2 << "\n";
 				transistors += 1;
 				connections += 1;
 
 				cout << "\nxp" << transistors;
-				cout <<" p"<< connections << " a " << out << p2 << "\n";
+				cout << " p" << connections << " a " << out << p2 << "\n";
 				transistors += 1;
 
 			}
 			if (group[i][21]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " b p"<<connections << n1 << "\n";
+				cout << " b p" << connections << n1 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout <<" p" << connections << " a " << out << p2 << "\n";
+				cout << " p" << connections << " a " << out << p2 << "\n";
 				transistors += 1;
 
 
 			}
 			if (group[i][22]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " a p"<<connections << p1 << "\n";
+				cout << " a p" << connections << p1 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
@@ -1124,29 +1186,29 @@ int main() {
 
 			}
 			if (group[i][23]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout << " p" << connections << " a p"<<connections+1 << p2 << "\n";
+				cout << " p" << connections << " a p" << connections + 1 << p2 << "\n";
 				transistors += 1;
 				connections += 1;
 
 				cout << "\nxp" << transistors;
-				cout <<" p"<<connections << " b out"<< p2 << "\n";
+				cout << " p" << connections << " b out" << p2 << "\n";
 				transistors += 1;
 				connections += 1;
 			}
 			if (group[i][24]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
-				cout << " a p"<<connections << n1 << "\n";
+				cout << " a p" << connections << n1 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
@@ -1156,20 +1218,20 @@ int main() {
 
 			}
 			if (group[i][25]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
 				transistors += 1;
 
 				cout << "\nxp" << transistors;
-				cout <<" p" << connections << " b " << out << p1 << "\n";
+				cout << " p" << connections << " b " << out << p1 << "\n";
 				transistors += 1;
 			}
 			if (group[i][26]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n2 << "\n";
@@ -1186,8 +1248,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][27]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n1 << "\n";
@@ -1199,8 +1261,8 @@ int main() {
 				transistors += 1;
 			}
 			if (group[i][28]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p1 << "\n";
@@ -1213,8 +1275,8 @@ int main() {
 
 			}
 			if (group[i][29]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n2 << "\n";
@@ -1231,8 +1293,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][30]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n1 << "\n";
@@ -1244,8 +1306,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][31]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p1 << "\n";
@@ -1261,15 +1323,15 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][32]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p2 << "\n";
 				transistors += 1;
 
 				cout << "\nxn" << transistors;
-				cout <<" p" << connections << " a p" << connections+1 << n2 << "\n";
+				cout << " p" << connections << " a p" << connections + 1 << n2 << "\n";
 				transistors += 1;
 				connections += 1;
 
@@ -1286,8 +1348,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][33]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n1 << "\n";
@@ -1296,7 +1358,7 @@ int main() {
 				cout << "\nxn" << transistors;
 				cout << " p" << connections << " b " << out << n1 << "\n";
 				transistors += 1;
-				
+
 
 				cout << "\nxp" << transistors;
 				cout << " p" << connections << " b " << out << p1 << "\n";
@@ -1304,8 +1366,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][34]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p1 << "\n";
@@ -1321,8 +1383,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][35]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p2 << "\n";
@@ -1346,8 +1408,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][36]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n1 << "\n";
@@ -1363,8 +1425,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][37]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p1 << "\n";
@@ -1376,8 +1438,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][38]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p1 << "\n";
@@ -1394,8 +1456,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][39]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << p1 << "\n";
@@ -1407,8 +1469,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][40]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p1 << "\n";
@@ -1425,8 +1487,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][41]) {
-				
-				
+
+
 				cout << "\nxp" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << p2 << "\n";
@@ -1450,8 +1512,8 @@ int main() {
 
 			}
 			if (group[i][42]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " a p" << connections << n1 << "\n";
@@ -1468,8 +1530,8 @@ int main() {
 				connections += 1;
 			}
 			if (group[i][43]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n1 << "\n";
@@ -1482,8 +1544,8 @@ int main() {
 			}
 
 			if (group[i][44]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n1 << "\n";
@@ -1501,8 +1563,8 @@ int main() {
 			}
 
 			if (group[i][45]) {
-				
-				
+
+
 				cout << "\nxn" << transistors;
 				if (i % 2 == 0) cout << " vdd"; else cout << " gnd";
 				cout << " b p" << connections << n1 << "\n";
@@ -1517,19 +1579,726 @@ int main() {
 		}
 		cout << "\n\n.end\n\n";
 
+
+
+
+		myfile << ".subckt f" << function_index << " a b out vdd\n";
+		myfile << "\n\nxp0 up out out" << p0;
+		myfile << "\nxn0 out out down" << n0;
+		connections = 0;
+		transistors = 2;
+
+
+
+		for (int i = 0; i < 4; i++) {
+
+			if (i == 0) {
+				myfile << "\n******** UpVddGnd ********\n\n";
+				out = "out";
+			}
+			if (i == 1) {
+				myfile << "\n******** DownVddGnd ********";
+				out = "out";
+			}
+			if (i == 2) {
+				myfile << "\n******** UpHalfVdd ********";
+				out = "up";
+			}
+
+			if (i == 3) {
+				myfile << "\n******** DownHalfVdd ********";
+				out = "down";
+			}
+
+
+
+			if (group[i][0]) {
+
+				myfile << "\n *DIRECT CONNECTION \n\n";
+				myfile << "Vs " << out;
+				if (i % 2 == 0) myfile << " vdd 0"; else myfile << " gnd 0";
+			}
+			if (group[i][1]) {
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b " << out << p2 << "\n";
+				transistors += 1;
+
+			}
+			if (group[i][2]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b " << out << n2 << "\n";
+				transistors += 1;
+			}
+			if (group[i][3]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a " << out << p2 << "\n";
+				transistors += 1;
+			}
+			if (group[i][4]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a " << out << n2 << "\n";
+				transistors += 1;
+			}
+			if (group[i][5]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][6]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][7]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][8]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][9]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+
+			}
+			if (group[i][10]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][11]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][12]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+
+
+			if (group[i][13]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b " << out << p1 << "\n";
+				transistors += 1;
+
+			}
+			if (group[i][14]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][15]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b " << out << n1 << "\n";
+				transistors += 1;
+			}
+			if (group[i][16]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a " << out << p1 << "\n";
+				transistors += 1;
+			}
+			if (group[i][17]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][18]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a " << out << n1 << "\n";
+				transistors += 1;
+			}
+			if (group[i][19]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+
+
+			}
+			if (group[i][20]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p2 << "\n";
+				transistors += 1;
+
+			}
+			if (group[i][21]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p2 << "\n";
+				transistors += 1;
+
+
+			}
+			if (group[i][22]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+			}
+			if (group[i][23]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b out" << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][24]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+			}
+			if (group[i][25]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+			}
+			if (group[i][26]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][27]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a " << out << n2 << "\n";
+				transistors += 1;
+			}
+			if (group[i][28]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b " << out << n2 << "\n";
+				transistors += 1;
+
+			}
+			if (group[i][29]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][30]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][31]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][32]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][33]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b " << out << n1 << "\n";
+				transistors += 1;
+
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][34]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][35]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][36]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][37]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][38]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][39]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][40]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][41]) {
+
+
+				myfile << "\nxp" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << p2 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+
+			}
+			if (group[i][42]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " a p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " b p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " b " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+			if (group[i][43]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+
+			if (group[i][44]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a p" << connections + 1 << n2 << "\n";
+				transistors += 1;
+				connections += 1;
+
+				myfile << "\nxp" << transistors;
+				myfile << " p" << connections << " a " << out << p2 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+
+			if (group[i][45]) {
+
+
+				myfile << "\nxn" << transistors;
+				if (i % 2 == 0) myfile << " vdd"; else myfile << " gnd";
+				myfile << " b p" << connections << n1 << "\n";
+				transistors += 1;
+
+				myfile << "\nxn" << transistors;
+				myfile << " p" << connections << " a " << out << n1 << "\n";
+				transistors += 1;
+				connections += 1;
+			}
+
+		}
+		myfile << "\n\n.end\n\n";
+
+		myfile.close();
+
 	}
 
 	// thoughts and notes:
 	// Group wrapping does not ensure transistor sharing between networks!
 	// Are p-buffers and n-buffers useful? maybe for single middle values.
 	// Any n-input 1-output functions can be done with this method, using n-dimensional rectangular grouping
+	// ... but is this better than combining two (n-1)-input 1-output functions?
 	// .. is it less optimal as n goes up?
-	// change int transistors to ntype and ptype counters
-	// Add function index functionality
-	// Add write-to-file functionality 
+	// change int transistors to ntype and ptype counters.. Or don't! Less confusing this way.
 	// Think about higher functions. How are they made with 2i 1o functions?
 	// How does function indexing relate to subfunctions and their connections?
-
 
 	return 0;
 }
