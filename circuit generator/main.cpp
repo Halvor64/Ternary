@@ -590,7 +590,7 @@ int main() {
 	while (true) {
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 3; j++) {
-				cout << "Enter the value of column " << j << " and row " << i << ": ";
+				cout << "Enter the value of column " << j << " and row " << i << " (0,1,2,x): ";
 				cin >> matrix[i][j];
 			}
 
@@ -682,7 +682,8 @@ int main() {
 		}
 		cout << "\n\n\n\n";
 
-
+		
+		/*
 		// prints all the possible groupings.  (repurposes the first input matrix)
 		for (int i = 0; i < 48; i++) {
 			rwGroup(0, 9, '0', 'w');
@@ -694,10 +695,9 @@ int main() {
 				}
 				cout << endl;
 			}
-
-
 		}
-
+		*/
+		rwGroup(0, 9, '0', 'w');
 
 		for (int i = 0; i < 48; i++) {	 // checks for each group in each network if a 0 is found. set group to true if none is.
 			for (int j = 0; j < 4; j++) {
@@ -875,7 +875,7 @@ int main() {
 		
 		
 		
-
+		/*
 
 		cout << ".subckt f" << function_index << " a b out vdd\n";
 		cout << "\n\nxp0 up out out" << p0;
@@ -1579,14 +1579,14 @@ int main() {
 		}
 		cout << "\n\n.end\n\n";
 
+		*/
 
-
-
-		myfile << ".subckt f" << function_index << " a b out vdd\n";
+		filename.erase (7,3); 
+		myfile << ".subckt " << filename << " a b out vdd\n";
 		myfile << "\n\nxp0 up out out" << p0;
 		myfile << "\nxn0 out out down" << n0;
-		connections = 0;
-		transistors = 2;
+		int connections = 0;
+		int transistors = 2;
 
 
 
@@ -2285,8 +2285,10 @@ int main() {
 
 		}
 		myfile << "\n\n.end\n\n";
-
 		myfile.close();
+
+		cout << "\n\n Circuit outputted into " << filename << ".sp\n\n";
+
 
 	}
 
