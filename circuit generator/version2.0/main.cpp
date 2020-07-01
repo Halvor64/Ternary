@@ -414,9 +414,9 @@ int main() {
 	cout << "\n\n true circuit truthtable: \n";
 
 	uint64_t function_index = 666;
-	// The true circuit truthtable is reconstructed (with no x)
-
-
+	
+	//string function_index;
+	
 
 
 	
@@ -435,17 +435,111 @@ int main() {
 		if (truthtable[i] == '2') function_index += 2 * uint64_t(pow(3, i));
 		*/
 
+
 	}
 	
 
 	// USE HEPTAVINTIMAL INSTEAD!!!
 
 
+	//HEPT HEPT HEPT 
 
+	// 000 001 002 010 011 012 020 021 022 100 101 102 110 111 112 120 121 122 200 201 202 210 211 212 220 221 222
+	//  0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F	G	H	K	M	N	P	R	T	V	X	Z
+	string index = "";
+	string hept;
+	for (int i = truthtable.size() -1 ; i > 0; i-=3) {
+		hept = truthtable[i];
+		hept += truthtable[i - 1]; 
+		hept += truthtable[i - 2];
+		//cout << "\n" << truthtable[i] + truthtable[i - 1] << "\n";
+		if (hept == "000") {
+			index += "0";
+		}
+		if (hept == "001") {
+			index += "1";
+		}
+		if (hept == "002") {
+			index += "2";
+		}
+		if (hept == "010") {
+			index += "3";
+		}
+		if (hept == "011") {
+			index += "4";
+		}
+		if (hept == "012") {
+			index += "5";
+		}
+		if (hept == "020") {
+			index += "6";
+		}
+		if (hept == "021") {
+			index += "7";
+		}
+		if (hept == "022") {
+			index += "8";
+		}
+		if (hept == "100") {
+			index += "9";
+		}
+		if (hept == "101") {
+			index += "A";
+		}
+		if (hept == "102") {
+			index += "B";
+		}
+		if (hept == "110") {
+			index += "C";
+		}
+		if (hept == "111") {
+			index += "D";
+		}
+		if (hept == "112") {
+			index += "E";
+		}
+		if (hept == "120") {
+			index += "F";
+		}
+		if (hept == "121") {
+			index += "G";
+		}
+		if (hept == "122") {
+			index += "H";
+		}
+		if (hept == "200") {
+			index += "K";
+		}
+		if (hept == "201") {
+			index += "M";
+		}
+		if (hept == "202") {
+			index += "N";
+		}
+		if (hept == "210") {
+			index += "P";
+		}
+		if (hept == "211") {
+			index += "R";
+		}
+		if (hept == "212") {
+			index += "T";
+		}
+		if (hept == "220") {
+			index += "V";
+		}
+		if (hept == "221") {
+			index += "X";
+		}
+		if (hept == "222") {
+			index += "Z";
+		}
 
+	}
 
+	cout << "\nfunction index: " << index;
 
-	cout << "\nfunction index: " << function_index;
+	//cout << "\nfunction index: " << function_index;
 	cout << "\n\n";
 
 
@@ -469,12 +563,13 @@ int main() {
 	cout << "\n Writing to file...\n";
 	
 	string filename = "f_";
-	for (int i = 0; i < 5 - to_string(function_index).length(); i++) { filename += "0"; }
-	filename += to_string(function_index);
-	filename += ".sp";
+	for (int i = 0; i < (int(pow(3,dimensions-1))) - index.length(); i++) { filename += "0"; }
+	filename += index;
+	//filename += ".sp";
 	ofstream myfile;
 	string path = "functions/";
 	path += filename;
+	path += ".sp";
 	myfile.open(path);
 
 
@@ -495,7 +590,6 @@ int main() {
 
 
 
-	filename.erase(7, 3);
 	myfile << ".subckt " << filename << " a a_p a_n b b_p b_n out vdd\n"; // make internal PTI and NTI? NO! multiple subcircuits might share! sum and carry for example!
 	myfile << "\n\nxp0 up out out" << p0;
 	myfile << "\nxn1 out out down" << n0<<"\n";
