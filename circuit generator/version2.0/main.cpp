@@ -1,4 +1,8 @@
 
+
+
+
+					
 using namespace std;
 #include <iostream>;
 #include <vector>;
@@ -64,8 +68,10 @@ void drawMask(int p1, int p2) {
 	}
 
 	if (error) {
+		
+		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // this means either edge wrapping, or redundant rectangle
 		//WRITE CODE WHICH CAN DO WRAPPING
-		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // \n(this means either edge wrapping, or reduntant rectangle)\n(edge wrapping to be implemented, somehow...)";
+		// or don't, the circuit is optimized as a whole instead.
 	}
 	else {
 		maskRecurs(dimensions, p1, p2);
@@ -81,8 +87,9 @@ int main() {
 		cin >> dimensions;
 	}
 
+	int mysteryNumber = dimensions * 1000;		// I DON'T KNOW WHAT THIS NUMBER SHOULD BE. LOW MAKES THE PROGRAM FASTER, BUT HANDLES FEWER INPUTS.... HMMMM
 
-	
+	circuit.resize(4, vector<vector<string> >(mysteryNumber, vector<string>(dimensions))); 
 
 	for (int i = 0; i < pow(3, dimensions); i++) {
 		truthtable.push_back('0');
@@ -96,7 +103,7 @@ int main() {
 
 
 		
-		circuit.resize(4, vector<vector<string> >(dimensions * 10, vector<string>(dimensions))); //why here??
+		
 
 
 		groups.resize(int(pow(pow(3, dimensions), 1.64))); // this is a bit of a problem. for high number of dimensions it becomes massive.. 
@@ -108,39 +115,6 @@ int main() {
 	}
 	
 
-	// MAYBE MOVE SOME THINGS FROM HERE TO WHERE IT IS ACTUALLY BEING USED.
-	// THAT WAY MAYBE IT IS EASIER TO GIVE IT THE PROPER SIZE
-
-
-
-
-	/*
-	//testing
-	int p1 = 0;
-	int p2 = 0;
-	while (true) {            //////////////////////////// WHILE TRUE TEST LOOP
-		cout << "\n========\np1: ";
-		cin >> p1;
-		
-		cout << "\n========\np2: ";
-		cin >> p2;
-
-		drawMask(p1, p2);
-		cout << "\n\n";
-		//cout << "p2 = " << p2 << endl;
-		for (int i = 0; i < truthtable.size(); i++) {
-			if (i % 3 == 0) cout << "\n";
-			if (i % 9 == 0) cout << "\n";
-			if (i % 27 == 0) cout << "\n";
-			cout << mask[i];
-
-		}
-		cout << "\n\n";
-
-	}
-	/////////////////////////////////////////////////
-	*/
-	
 
 	for (int i = 0; i < pow(3,dimensions); i++) {
 		cout << "Enter the truthtable output when ";
@@ -199,9 +173,9 @@ int main() {
 	bool lessthan = false;
 
 	for (int n = 0; n < 4; n++) { //for each of the four transistor networks
-		cout << "\n\n";
+		//cout << "\n\n";
 		//system("pause");
-		cout << "\n\n Network " << n << "...\n\n";
+		//cout << "\n\n Network " << n << "...\n\n";
 		groupNr = 0;
 		for (int f = 0; f < truthtable.size(); f++) {
 			fill(groups[f].begin(), groups[f].end(), '0');
@@ -306,21 +280,13 @@ int main() {
 					groups[g][j] = '0';
 				}
 
-				//for () // shift all groups above this one down and subtract groupNr	maybe not important
+				//for () // shift all groups above this one down and subtract groupNr	
 
 
 			}
 
 		}
 
-
-
-		// REMOVE GROUPS WHICH ARE ONLY THERE BECAUSE OF x
-		// EXAMPLE:
-		// 010
-		// x1x
-		// 010
-		// only needs ONE group!
 
 
 		//for each group, see if the sum of the other groups would cover all the 1s (WITHOUT x)
@@ -354,7 +320,7 @@ int main() {
 
 
 
-
+		/*
 		for (int i = 0; i < groupNr; i++) {
 			cout << "\n\ngroup " << i;
 			for (int j = 0; j < truthtable.size(); j++) {
@@ -364,6 +330,9 @@ int main() {
 			}
 		}
 
+		system("pause");
+
+		*/
 
 		fill(tempVect.begin(), tempVect.end(), '0');
 		for (int j = 0; j < groupNr; j++) {
@@ -388,15 +357,16 @@ int main() {
 					truthtable[i] = '0';
 				}
 				else if (n == 2) {
-					truthtable[i] = '1';
+					if (truthtable[i] != '2') {
+						truthtable[i] = '1';
+					}
+
 				}
 				//else if (n == 3) {
 					// don't need this one
 				//}
 			}
 		}
-
-		
 
 
 		
@@ -423,63 +393,55 @@ int main() {
 					}
 					else cut = true;
 				}
-				cout << "\n\nGroup: " << g << "\nDimension: " << d << "\ntrans: " << transType;
+				//cout << "\n\nGroup: " << g << "\nDimension: " << d << "\ntrans: " << transType;
 				circuit[n][g][d] = transType;
-				cout << "\ncircuit[n][g][d]: " << circuit[n][g][d];
+				//cout << "\ncircuit[n][g][d]: " << circuit[n][g][d];
 				//system("pause");
 			}
 		}
 
-
-
-		// for each 1 (OR x), draw every rectangle with it in the "top-left" corner. (maybe not every rectangle. can definitely be optimised)
-		// store every rectangle with no 0s, in  groups[n][3^dimensions]
-		// erase every stored rectangle which is entirely covered by a bigger stored rectangle (this is where optimisation for step 1 would be useful)
-		// sort all rectangles in groups[][] by how many 1s they contain (NOT x!)
-		// from the top, only keep the ones required to cover all 1s (not x)
-		// erase the stored rectangles which are covered by a combination of bigger rectangles
-		// for each group, go through each dimension and cut off the zeros to make a transistor path.
 	}
 
 
 
+	 
 
 
-
-
-	// cout STUFF 
-	// find the function index, for N DIMENSIONS (??)
-	//if this or that network, gnd or vdd
-	//for groups
-	//for each dimension
-	//if so and so is 0, this transistor
-	// if it's not finished, add a point
-	// repeat until its finished
-	// out or up/down
-	//next group
 
 
 
 
 	cout << "\n\n true circuit truthtable: \n";
 
-	uint64_t function_index = 0;
+	uint64_t function_index = 666;
 	// The true circuit truthtable is reconstructed (with no x)
+
+
+
 
 	
 	for (int i = 0; i < truthtable.size(); i++) {
 		if (i % 3 == 0) cout << "\n";
-		if (i % 9 == 0) cout << "\n\n";
-		if (i % 27 == 0) cout << "\n\n\n";
+		//if (i % 9 == 0) cout << "\n\n";
+		//if (i % 27 == 0) cout << "\n\n\n";
 		cout << truthtable[i];
 
+		/*
 		// WILL OVERFLOW FOR n>3!!!!!!!!
 		//3^(3^3) < 2^64
 		//3^(3^4) > 2^64
 		// USE HEPT NAMES INSTEAD!!!
 		if (truthtable[i] == '1') function_index += uint64_t(pow(3, i));
 		if (truthtable[i] == '2') function_index += 2 * uint64_t(pow(3, i));
+		*/
+
 	}
+	
+
+	// USE HEPTAVINTIMAL INSTEAD!!!
+
+
+
 
 
 
@@ -487,19 +449,7 @@ int main() {
 	cout << "\n\n";
 
 
-	cout << "\nCIRCUIT VECTOR:\n";
-	for (int n = 0; n < 4; n++) {
-		cout << "\nnetwork "<< n <<"\n";
-		for (int g = 0; g < dimensions * 10; g++) {
-			cout << "\ngroup " << g << endl;
-			for (int d = 0; d < dimensions; d++) {
-				cout << "dimension: " << d << endl;
-				cout << circuit[n][g][d] << endl;
-			}
-		}
-	}
-
-	cout << "\n\n" << endl;
+	
 	
 
 
@@ -516,10 +466,7 @@ int main() {
 
 
 
-
-	//system("pause");
-
-
+	cout << "\n Writing to file...\n";
 	
 	string filename = "f_";
 	for (int i = 0; i < 5 - to_string(function_index).length(); i++) { filename += "0"; }
@@ -530,11 +477,6 @@ int main() {
 	path += filename;
 	myfile.open(path);
 
-
-	//red = 0.783nm, covers one from the side
-	//blue = 1.487nm, covers two from the side
-	// p-type from left and top
-	// n-type from right and bottom
 
 
 
@@ -556,113 +498,139 @@ int main() {
 	filename.erase(7, 3);
 	myfile << ".subckt " << filename << " a a_p a_n b b_p b_n out vdd\n"; // make internal PTI and NTI? NO! multiple subcircuits might share! sum and carry for example!
 	myfile << "\n\nxp0 up out out" << p0;
-	myfile << "\nxn1 out out down" << n0<<"\n\n\n";
+	myfile << "\nxn1 out out down" << n0<<"\n";
 	int connections = 0;
 	int transistors = 2;
 
 
 	string connect1 = "foobar";
 	string connect2 = "foobar";
+	string connect3 = "foobar";
 	string out = "out";
 	string vsource = "vdd";
 	// PRINT
 	for (int n = 0; n < 4; n++) {
+
+		//myfile << "\n\n***network " << n << endl;
+
 		if (n == 0) {
 			out = "out";
 			vsource = "vdd";
+			myfile << "\n\n***pullup full"<< endl;
 		}
 		if (n == 1) {
 			out = "out";
 			vsource = "gnd";
+			myfile << "\n\n***pulldown full" << endl;
 		}
 		if (n == 2) {
 			out = "up";
 			vsource = "vdd";
+			myfile << "\n\n***pullup half" << endl;
 		}
 			
 		if (n == 3) {
 			out = "down";
 			vsource = "gnd";
+			myfile << "\n\n***pulldown half" << endl;
 		}
 		
 
-		for (int g = 0; g < dimensions * 10; g++) {
+		for (int g = 0; g < mysteryNumber; g++) { //@@@@@@@@@@@@@@@@@@@@@@@@ THIS IS WRONG! DIMENSIONS * 1000 IS A QUICK DIRTY FIX!! makes the program run slower than it should. Makes it crash for higher number of inputs.
+			// in circuit[n][g][d], what number d is the last valid one? (empty, 111, 000 are not valid)
+			int lastDimension = 0;
+			for (int dd = 0; dd < dimensions; dd++) {
+				if (circuit[n][g][dd] != "000" && circuit[n][g][dd] != "111" && !circuit[n][g][dd].empty()) {
+					lastDimension = dd;
+				}
+			}
+			//cout << "\n\ng: " << g << "\nd: " << d << "\nstring: " << circuit[n][g][d];
+
 			for (int d = 0; d < dimensions; d++) {
-				if (!circuit[n][g][d].empty() && circuit[n][g][d] != "000") {
+				if (!circuit[n][g][d].empty() && circuit[n][g][d] != "000" && circuit[n][g][d] != "111") {
+
 
 
 					if (d == 0) {
+						myfile << "\n";
 						connect1 = vsource;
+					}
+					else {
+						connect1 = 'p' + to_string(connections);
+						connections += 1;
+					}
+
+
+					if (d == lastDimension) {
+						if (circuit[n][g][d] == "010") {
+							connect2 = 'p' + to_string(connections);
+							connections += 1;
+							connect3 = out;
+						}
+						else {
+							connect2 = out;
+						}
+					}
+					else {
 						connect2 = 'p' + to_string(connections);
+						if (circuit[n][g][d] == "010") {
+							connections += 1;
+							connect3 = 'p' + to_string(connections);
+							
+						}
 					}
-					if (d == 1) {
-						connect1 = 'p' + to_string(connections);
-						connect2 = 'p' + to_string(connections+1);
-					}
-					if (d == 2) {
-						connect1 = 'p' + to_string(connections);
-						connect2 = out;
-					}
-
-
-					if (circuit[n][g][d].empty()) { // THIS ONLY REALLY WORKS IF THERE ARE NO 0-GROUPS
-						connect1 = connections;
-						connect2 = out;				// if the last group is a 0-group, this will never be outputted
-					}
-					connections += 1;
 
 
 					if (n % 2 == 0) {
 						if (circuit[n][g][d] == "100") {	// small ptype I
-							myfile << "\nxp"<<transistors<<" "<<connect1 << "i"<<d << " " << connect2 << p1; 
+							myfile << "\nxp"<<transistors<<" "<<connect1 << " i"<<d << " " << connect2 << p1; 
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "110") {	// big ptype I
-							myfile << "\nxp" << transistors << " " << connect1 << "i" << d << " " << connect2 << p2;
+							myfile << "\nxp" << transistors << " " << connect1 << " i" << d << " " << connect2 << p2;
 							transistors += 1;
 						}
-						if (circuit[n][g][d] == "001") {	// big ptype I_N
-							myfile << "\nxp" << transistors << " " << connect1 << "i" << d << "_n " << connect2 << p2;
+						if (circuit[n][g][d] == "001") {	// big ptype I_P
+							myfile << "\nxp" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << p2;
 							transistors += 1;
 						}
-						if (circuit[n][g][d] == "011") {	// big ptype I_P
-							myfile << "\nxp" << transistors << " " << connect1 << "i" << d << "_p " << connect2 << p2;
+						if (circuit[n][g][d] == "011") {	// big ptype I_N
+							myfile << "\nxp" << transistors << " " << connect1 << " i" << d << "_n " << connect2 << p2;
+							transistors += 1;
+						}
+						if (circuit[n][g][d] == "010") {	// big ptype I + big ptype I_P
+							myfile << "\nxp" << transistors << " " << connect1 << " i" << d << " " << connect2 << p2;
+							transistors += 1;
+							myfile << "\nxp" << transistors << " " << connect2 << " i" << d << "_n " <<  connect3 << p2;
 							transistors += 1;
 						}
 					}
 					else {
 						if (circuit[n][g][d] == "100") {	// big ntype I_N
-							myfile << "\nxn" << transistors << " " << connect1 << "i" << d << "_n " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_n " << connect2 << p2;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "110") {	// big ntype I_P
-							myfile << "\nxn" << transistors << " " << connect1 << "i" << d << "_p " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << p2;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "001") {	// small ntype I
-							myfile << "\nxn" << transistors << " " << connect1 << "i" << d << " " << connect2 << p1;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << p1;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "011") {	// big ntype I
-							myfile << "\nxn" << transistors << " " << connect1 << "i" << d << " " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << p2;
+							transistors += 1;
+						}
+
+						if (circuit[n][g][d] == "010") {	// big ntype I_P + big ntype I
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << p2;
+							transistors += 1;
+							myfile << "\nxn" << transistors << " " << connect2 << " i" << d << " " << connect3 << p2;
 							transistors += 1;
 						}
 					}
-
-
-					///// These two might be unnecessary if it's optimized anyway
-					/*
-					if (circuit[n][g][d] == "010") {
-
-					}
-					if (circuit[n][g][d] == "101") {
-
-					}
-					*/
-					////
-
-
-
+					
 
 					//if d is 0, connect to top/bottom
 					//if d is 1, use a point
@@ -677,18 +645,15 @@ int main() {
 		}
 	}
 	
+	myfile << "\n\n.ends\n\n";
+	myfile.close();
+
+	cout << "\n\n Circuit outputted into " << filename << ".sp\n\n";
 
 
-
-	// THE FILE INDEX BECOMES TOO HIGH WHEN n>3!!
-	// CIN FILENAME INSTEAD!!
-	// no, hept
-	// also, call by index
+	system("pause");
 
 
-
-	//system("pause");
 	return 0;
 }
-
 
