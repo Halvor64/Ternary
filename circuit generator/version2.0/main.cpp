@@ -1,7 +1,4 @@
 
-
-
-
 					
 using namespace std;
 #include <iostream>;
@@ -10,9 +7,9 @@ using namespace std;
 #include <fstream>
 #include <string>
 
-vector<char> truthtable;
-vector<char> tempVect;
-vector<vector<char>> networks; 
+vector<char> truthtable;	//the truthtable for the entire circuit
+vector<char> tempVect;		
+vector<vector<char>> networks;	// the four truth tables, pull-up and pull-down networks for 0.9v and 0.45v 
 
 vector<char> upvddgnd;		//network[0][x]
 vector<char> downvddgnd;	//network[1][x]
@@ -20,15 +17,15 @@ vector<char> uphalfvdd;		//network[2][x]
 vector<char> downhalfvdd;	//network[3][x]
 
 
-vector<vector<vector<string>>> circuit;	//network, group, series
+vector<vector<vector<string>>> circuit;	//network, group, series. The transistor types and their connections are encoded in this vector
 
-vector<vector<char>> groups;
-vector<char> mask;
 
-int dimensions = -1;
-int maskIndex = 0;
-int transistors = 0;
-bool foobarmode = false;
+vector<char> mask;	// the rectangular groupings are first generated here, then compared to the truthtable.
+vector<vector<char>> groups;	//groupnr, values. The valid rectangular groupings are stored here.
+
+
+int dimensions = -1; // the number of inputs
+int maskIndex = 0; 
 
 
 
@@ -57,7 +54,7 @@ void maskRecurs(int n,int p1,int p2) {
 	}
 }
 
-void drawMask(int p1, int p2) {
+void drawMask(int p1, int p2) {		// draws an n-dimensional rectangle between two corner points
 	fill(mask.begin(), mask.end(), '0');
 	maskIndex = 0;
 	bool error = false;
@@ -68,10 +65,8 @@ void drawMask(int p1, int p2) {
 	}
 
 	if (error) {
-		
 		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // this means either edge wrapping, or redundant rectangle
-		//WRITE CODE WHICH CAN DO WRAPPING
-		// or don't, the circuit is optimized as a whole instead.
+		//edge wrapping can be done, but instead the groups are optimized later by sharing transistors optimally.
 	}
 	else {
 		maskRecurs(dimensions, p1, p2);
@@ -81,13 +76,14 @@ void drawMask(int p1, int p2) {
 int main() {
 
 
-
-	while (!((dimensions < truthtable.max_size()) && (dimensions > 0))) {
-		cout << "\nEnter the function arity(number of dimensions): ";
+	while (!((dimensions < 8) && (dimensions > 0))) { 
+		cout << "\nEnter the function arity(number of dimensions, 1~7): ";
 		cin >> dimensions;
 	}
 
-	int mysteryNumber = dimensions * 1000;		// I DON'T KNOW WHAT THIS NUMBER SHOULD BE. LOW MAKES THE PROGRAM FASTER, BUT HANDLES FEWER INPUTS.... HMMMM
+	int mysteryNumber = dimensions * 1000;		// FIX THIS
+	int mysteryExponent = 1.64;					// FIX THIS
+
 
 	circuit.resize(4, vector<vector<string> >(mysteryNumber, vector<string>(dimensions))); 
 
@@ -102,20 +98,13 @@ int main() {
 		mask.push_back('0');
 
 
-		
-		
-
-
-		groups.resize(int(pow(pow(3, dimensions), 1.64))); // this is a bit of a problem. for high number of dimensions it becomes massive.. 
-														 //THIS IS A PROBLEM!! IT BECOMES A PROBLEM VERY QUICKLY.. 
-		for (int j = 0; j < int(pow(pow(3, dimensions), 1.64)); j++) {	
+		groups.resize(int(pow(pow(3, dimensions), mysteryExponent))); // this is a bit of a problem. for high number of dimensions it becomes massive.. 
+		for (int j = 0; j < int(pow(pow(3, dimensions), mysteryExponent)); j++) {  //CAN IT BE DONE WITHOUT BEING SO EXPONENTIAL??
 			groups[j].push_back('0');
 		}
 
 	}
 	
-
-
 	for (int i = 0; i < pow(3,dimensions); i++) {
 		cout << "Enter the truthtable output when ";
 		for (int j = 1; j < dimensions + 1; j++) {
@@ -136,7 +125,7 @@ int main() {
 			networks[0][i] = '0';
 			networks[1][i] = '1';
 			networks[2][i] = '0';
-			networks[3][i]= 'x';
+			networks[3][i] = 'x';
 		}
 		if (truthtable[i] == '1') {
 			networks[0][i] = '0';
@@ -168,14 +157,10 @@ int main() {
 	}
 
 
-
 	int groupNr = 0;
-	bool lessthan = false;
+	bool lessthan = false; // if p2 is lower in any dimension than p1, it is not a valid rectangle
 
 	for (int n = 0; n < 4; n++) { //for each of the four transistor networks
-		//cout << "\n\n";
-		//system("pause");
-		//cout << "\n\n Network " << n << "...\n\n";
 		groupNr = 0;
 		for (int f = 0; f < truthtable.size(); f++) {
 			fill(groups[f].begin(), groups[f].end(), '0');
@@ -183,7 +168,7 @@ int main() {
 		for (int p1 = 0; p1 < truthtable.size(); p1++) { //for each point in the network which is 1 or x
 			
 			if ((networks[n][p1] == '1') || (networks[n][p1] == 'x')) {
-				for (int p2 = p1; p2 < truthtable.size(); p2++){ //  for each point after the 1 or x                 p = 0 for warping (it's not implemented)
+				for (int p2 = p1; p2 < truthtable.size(); p2++){ //  for each point after the 1 or x                 
 					lessthan = false;
 					
 					for (int j = 1; j < dimensions + 1; j++) {					// check if it's lower in any dimension (it would result in a 0-mask)
@@ -193,9 +178,7 @@ int main() {
 					}
 					
 					if (!lessthan) {			// if it is a valid rectangle, compare it with the truthtable of the network
-						
 						drawMask(p1, p2);
-						
 						bool equalMask = true;
 						for (int j = p1; j < p2 +1; j++) {		// for every point, see if a 1 in the mask is a 0 in the network truth table
 							if (mask[j] == '1') {
@@ -206,21 +189,19 @@ int main() {
 						}
 						
 						if (equalMask == true) {				// if there are no 0s compared to the mask
-
 							bool written = false;
 							bool covered = true;
 
 							for (int g = 0; g < groupNr; g++) {				// check if a group would be covered by the next group, and overwrite it if it does 
 								//NOTE: This can overwrite multiple groups, resulting in duplicate groups
 								covered = true;
-								for (int c = 0; c < p2; c++) { // is p2 fine?
+								for (int c = 0; c < p2; c++) { 
 									if ((groups[g][c] == '1') && (mask[c] == '0')) {
 										covered = false;
 									}
 								}
 								if (covered) {
 									for (int j = p1; j < p2 + 1; j++) {
-										//cout << "\ngroupNr: " << g  << " overwritten" << "\nj: " << j;
 										groups[g][j] = mask[j];
 									}
 									written = true;
@@ -238,7 +219,6 @@ int main() {
 									}
 								}
 
-
 								covered = true;
 								for (int j = 0; j < truthtable.size(); j++) {
 									if (mask[j] == '1') {
@@ -249,7 +229,6 @@ int main() {
 								}
 								if (!covered) {
 									for (int j = p1; j < p2 + 1; j++) {
-										//cout << "\ngroupNr: " << groupNr << "\nj: " << j;
 										groups[groupNr][j] = mask[j];
 									}
 									groupNr += 1;
@@ -279,14 +258,11 @@ int main() {
 				for (int j = 0; j < truthtable.size(); j++) {
 					groups[g][j] = '0';
 				}
-
-				//for () // shift all groups above this one down and subtract groupNr	
-
+				//for () // shift all groups above this one down and subtract groupNr (not implemented)	
 
 			}
 
 		}
-
 
 
 		//for each group, see if the sum of the other groups would cover all the 1s (WITHOUT x)
@@ -318,21 +294,6 @@ int main() {
 			}
 		}
 
-
-
-		/*
-		for (int i = 0; i < groupNr; i++) {
-			cout << "\n\ngroup " << i;
-			for (int j = 0; j < truthtable.size(); j++) {
-				if (j % 3 == 0) cout << "\n";
-				if (j % 9 == 0) cout << "\n\n";
-				cout << groups[i][j];
-			}
-		}
-
-		system("pause");
-
-		*/
 
 		fill(tempVect.begin(), tempVect.end(), '0');
 		for (int j = 0; j < groupNr; j++) {
@@ -369,10 +330,7 @@ int main() {
 		}
 
 
-		
-
 		// build the circuit
-	
 		for (int g = 0; g < groupNr; g++) {
 			for (int d = 0; d < dimensions; d++) {
 
@@ -402,47 +360,15 @@ int main() {
 
 	}
 
-
-
-	 
-
-
-
-
-
-
 	cout << "\n\n true circuit truthtable: \n";
 
-	uint64_t function_index = 666;
-	
-	//string function_index;
-	
-
-
-	
 	for (int i = 0; i < truthtable.size(); i++) {
 		if (i % 3 == 0) cout << "\n";
 		//if (i % 9 == 0) cout << "\n\n";
 		//if (i % 27 == 0) cout << "\n\n\n";
 		cout << truthtable[i];
-
-		/*
-		// WILL OVERFLOW FOR n>3!!!!!!!!
-		//3^(3^3) < 2^64
-		//3^(3^4) > 2^64
-		// USE HEPT NAMES INSTEAD!!!
-		if (truthtable[i] == '1') function_index += uint64_t(pow(3, i));
-		if (truthtable[i] == '2') function_index += 2 * uint64_t(pow(3, i));
-		*/
-
-
 	}
 	
-
-	// USE HEPTAVINTIMAL INSTEAD!!!
-
-
-	//HEPT HEPT HEPT 
 
 	// 000 001 002 010 011 012 020 021 022 100 101 102 110 111 112 120 121 122 200 201 202 210 211 212 220 221 222
 	//  0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F	G	H	K	M	N	P	R	T	V	X	Z
@@ -452,100 +378,38 @@ int main() {
 		hept = truthtable[i];
 		hept += truthtable[i - 1]; 
 		hept += truthtable[i - 2];
-		//cout << "\n" << truthtable[i] + truthtable[i - 1] << "\n";
-		if (hept == "000") {
-			index += "0";
-		}
-		if (hept == "001") {
-			index += "1";
-		}
-		if (hept == "002") {
-			index += "2";
-		}
-		if (hept == "010") {
-			index += "3";
-		}
-		if (hept == "011") {
-			index += "4";
-		}
-		if (hept == "012") {
-			index += "5";
-		}
-		if (hept == "020") {
-			index += "6";
-		}
-		if (hept == "021") {
-			index += "7";
-		}
-		if (hept == "022") {
-			index += "8";
-		}
-		if (hept == "100") {
-			index += "9";
-		}
-		if (hept == "101") {
-			index += "A";
-		}
-		if (hept == "102") {
-			index += "B";
-		}
-		if (hept == "110") {
-			index += "C";
-		}
-		if (hept == "111") {
-			index += "D";
-		}
-		if (hept == "112") {
-			index += "E";
-		}
-		if (hept == "120") {
-			index += "F";
-		}
-		if (hept == "121") {
-			index += "G";
-		}
-		if (hept == "122") {
-			index += "H";
-		}
-		if (hept == "200") {
-			index += "K";
-		}
-		if (hept == "201") {
-			index += "M";
-		}
-		if (hept == "202") {
-			index += "N";
-		}
-		if (hept == "210") {
-			index += "P";
-		}
-		if (hept == "211") {
-			index += "R";
-		}
-		if (hept == "212") {
-			index += "T";
-		}
-		if (hept == "220") {
-			index += "V";
-		}
-		if (hept == "221") {
-			index += "X";
-		}
-		if (hept == "222") {
-			index += "Z";
-		}
+		if (hept == "000") {index += "0";}
+		else if (hept == "001") {index += "1";}
+		else if (hept == "002") {index += "2";}
+		else if (hept == "010") {index += "3";}
+		else if (hept == "011") {index += "4";}
+		else if (hept == "012") {index += "5";}
+		else if (hept == "020") {index += "6";}
+		else if (hept == "021") {index += "7";}
+		else if (hept == "022") {index += "8";}
+		else if (hept == "100") {index += "9";}
+		else if (hept == "101") {index += "A";}
+		else if (hept == "102") {index += "B";}
+		else if (hept == "110") {index += "C";}
+		else if (hept == "111") {index += "D";}
+		else if (hept == "112") {index += "E";}
+		else if (hept == "120") {index += "F";}
+		else if (hept == "121") {index += "G";}
+		else if (hept == "122") {index += "H";}
+		else if (hept == "200") {index += "K";}
+		else if (hept == "201") {index += "M";}
+		else if (hept == "202") {index += "N";}
+		else if (hept == "210") {index += "P";}
+		else if (hept == "211") {index += "R";}
+		else if (hept == "212") {index += "T";}
+		else if (hept == "220") {index += "V";}
+		else if (hept == "221") {index += "X";}
+		else if (hept == "222") {index += "Z";}
 
 	}
 
 	cout << "\nfunction index: " << index;
-
-	//cout << "\nfunction index: " << function_index;
 	cout << "\n\n";
-
-
-	
-	
-
 
 	/* TO OPTIMIZE THE CIRCUIT BY SHARING TRANSISTORS:
 	you first find the letter which is the most common
@@ -556,8 +420,14 @@ int main() {
 	and THEN amongst the ones with an A (or without A if they are more common), find the 3rd most common letter, and do another branching under A,
 	then the same for above B
 	repeat until all the letters are covered
-	*/
 
+	in other words, group the most common input in the largest available space.
+	all of vdd starts as one space, as well as gnd
+	up, down, and out/out are four other spaces. 
+	6 starting spaces. sharing an input will create a sub-space. 
+	
+	WHAT IS THE BEST WAY TO DO THIS, MATHEMATICALLY?
+	*/
 
 
 	cout << "\n Writing to file...\n";
@@ -577,10 +447,10 @@ int main() {
 
 	// SPECIFY TRANSISTOR MODEL AND PARAMETERS HERE (don't forget the sub input if there is one)
 	string p0 = " gnd PCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbp = 'Vfp' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 13 "; //" ptype 1.018nm";
-	string n0 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+ Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 13 "; //" ntype 1.018nm";
+	string n0 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 13 "; //" ntype 1.018nm";
 
-	string n1 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+ Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 10 "; //" ntype 0.783nm";
-	string n2 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+ Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 19 "; //" ntype 1.487nm";
+	string n1 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 10 "; //" ntype 0.783nm";
+	string n2 = " gnd NCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbn = 'Vfn' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 19 "; //" ntype 1.487nm";
 
 	string p1 = " gnd PCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbp = 'Vfp' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 10  "; //" ptype 0.783nm";
 	string p2 = " gnd PCNFET Lch=Lg  Lgeff='Lgef' Lss=32e-9  Ldd=32e-9 \n+Kgate = 'Kox' Tox = 'Hox' Csub = 'Cb' Vfbp = 'Vfp' Dout = 0  Sout = 0  Pitch = 20e-9 tubes = 3  n2 = n  n1 = 19  "; //" ptype 1.487nm";
@@ -593,8 +463,8 @@ int main() {
 	myfile << ".subckt " << filename << " a a_p a_n b b_p b_n out vdd\n"; // make internal PTI and NTI? NO! multiple subcircuits might share! sum and carry for example!
 	myfile << "\n\nxp0 up out out" << p0;
 	myfile << "\nxn1 out out down" << n0<<"\n";
-	int connections = 0;
-	int transistors = 2;
+	int connections = 0; //counts number of connection nodes
+	int transistors = 2; //counts number of transistors
 
 
 	string connect1 = "foobar";
@@ -605,7 +475,6 @@ int main() {
 	// PRINT
 	for (int n = 0; n < 4; n++) {
 
-		//myfile << "\n\n***network " << n << endl;
 
 		if (n == 0) {
 			out = "out";
@@ -630,22 +499,28 @@ int main() {
 		}
 		
 
-		for (int g = 0; g < mysteryNumber; g++) { //@@@@@@@@@@@@@@@@@@@@@@@@ THIS IS WRONG! DIMENSIONS * 1000 IS A QUICK DIRTY FIX!! makes the program run slower than it should. Makes it crash for higher number of inputs.
-			// in circuit[n][g][d], what number d is the last valid one? (empty, 111, 000 are not valid)
+		for (int g = 0; g < mysteryNumber; g++) {
+
+			// in circuit[n][g][d], what number d is the first and last valid one? (empty, 111, 000 are not valid)
+			int firstDimension = -1;
 			int lastDimension = 0;
 			for (int dd = 0; dd < dimensions; dd++) {
+				
 				if (circuit[n][g][dd] != "000" && circuit[n][g][dd] != "111" && !circuit[n][g][dd].empty()) {
 					lastDimension = dd;
+					if (firstDimension == -1) {
+						firstDimension = dd;
+					}
 				}
 			}
-			//cout << "\n\ng: " << g << "\nd: " << d << "\nstring: " << circuit[n][g][d];
+			
 
 			for (int d = 0; d < dimensions; d++) {
 				if (!circuit[n][g][d].empty() && circuit[n][g][d] != "000" && circuit[n][g][d] != "111") {
 
 
 
-					if (d == 0) {
+					if (d == firstDimension) {
 						myfile << "\n";
 						connect1 = vsource;
 					}
@@ -701,39 +576,29 @@ int main() {
 					}
 					else {
 						if (circuit[n][g][d] == "100") {	// big ntype I_N
-							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_n " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_n " << connect2 << n2;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "110") {	// big ntype I_P
-							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << n2;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "001") {	// small ntype I
-							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << p1;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << n1;
 							transistors += 1;
 						}
 						if (circuit[n][g][d] == "011") {	// big ntype I
-							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << " " << connect2 << n2;
 							transistors += 1;
 						}
 
 						if (circuit[n][g][d] == "010") {	// big ntype I_P + big ntype I
-							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << p2;
+							myfile << "\nxn" << transistors << " " << connect1 << " i" << d << "_p " << connect2 << n2;
 							transistors += 1;
-							myfile << "\nxn" << transistors << " " << connect2 << " i" << d << " " << connect3 << p2;
+							myfile << "\nxn" << transistors << " " << connect2 << " i" << d << " " << connect3 << n2;
 							transistors += 1;
 						}
 					}
-					
-
-					//if d is 0, connect to top/bottom
-					//if d is 1, use a point
-					// connection +=1 when points are used
-					// transistors +=1 for every transistor
-					// if pull-up
-					//  each value gives a different transistor (or transistors!)
-					// if pull-down
-					//  same but different transistors
 				}
 			}
 		}
@@ -750,4 +615,14 @@ int main() {
 
 	return 0;
 }
+
+
+
+// DO TO:
+// - Write transistor-sharing optimization
+// - Figure out the magic numbers
+// - Optimize the vector sizes if possible
+
+
+
 
