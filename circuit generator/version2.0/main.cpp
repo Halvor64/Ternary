@@ -1,9 +1,19 @@
+
+
+
+
 using namespace std;
-#include <iostream>;
-#include <vector>;
-#include <math.h>;
+#include <iostream>
+#include <vector>
+#include <math.h>
 #include <fstream>
 #include <string>
+
+#include <direct.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+
 
 vector<char> truthtable;	//the truthtable for the entire circuit
 vector<char> tempVect;
@@ -65,7 +75,7 @@ void drawMask(int p1, int p2) {		// draws an n-dimensional rectangle between two
 
 	if (error) {
 		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // this means either edge wrapping, or redundant rectangle
-		//edge wrapping can be done, but the circuit can be optimized instead by transistor grouping
+																		 //edge wrapping can be done, but the circuit can be optimized instead by transistor grouping
 	}
 	else {
 		maskRecurs(dimensions, p1, p2);
@@ -75,15 +85,28 @@ void drawMask(int p1, int p2) {		// draws an n-dimensional rectangle between two
 int main() {
 
 
-	while (!((dimensions < 8) && (dimensions > 0))) {
-		cout << "\nEnter the function arity(number of dimensions, 1~7): ";
-		cin >> dimensions;
-	}
 
-	int mysteryNumber = dimensions * dimensions * 10;//dimensions * 1000;		// FIX THIS
+
+
+
+	cout << "\nEnter the function arity(number of inputs, 1~7): ";
+	cin >> dimensions;
+	while (!((dimensions < 11) && (dimensions > 0)) || cin.fail()) {
+		cout << "\nEnter the function arity(number of inputs, 1~7): ";
+		cin.clear();
+		cin.ignore(256, '\n');
+		cin >> dimensions;
+
+	} 
+
+
+
+
+
+	int mysteryNumber = dimensions * dimensions * 100;//dimensions * 1000;		// THIS NEEDS TO BE HIGHER TO ALLOW HIGHER ARITIES... OBVIOUSLY IT'S GROWING EXPONENTIALLY, NOT LINEARLY, WITH ARITY (more so than this)
 	int mysteryExponent = 1.64;					// FIX THIS
 
-
+	cout << "\ngenerating vectors...\n";
 	circuit.resize(4, vector<vector<string> >(mysteryNumber, vector<string>(dimensions)));
 
 	for (int i = 0; i < pow(3, dimensions); i++) {
@@ -101,15 +124,18 @@ int main() {
 		for (int j = 0; j < int(pow(pow(3, dimensions), mysteryExponent)); j++) {  //CAN IT BE DONE WITHOUT BEING SO EXPONENTIAL??
 			groups[j].push_back('0');
 		}
-
 	}
 
 	for (int i = 0; i < pow(3, dimensions); i++) {
-		cout << "Enter the function output (0,1,2,x) when ";
-		for (int j = 1; j < dimensions + 1; j++) {
-			cout << "i" << j << " = " << dimensionLevel(i, j) << " ";
+		truthtable[i] = 'y';
+		while (truthtable[i] != '0' && truthtable[i] != '1' && truthtable[i] != '2' && truthtable[i] != 'x') {
+			cout << "Enter the function output (0,1,2,x) when ";
+			for (int j = 1; j < dimensions + 1; j++) {
+				cout << "i" << j << " = " << dimensionLevel(i, j) << " ";
+			}
+			cin >> truthtable[i];
 		}
-		cin >> truthtable[i];
+		
 	}
 
 	for (int i = 0; i < truthtable.size(); i++) {
@@ -155,11 +181,16 @@ int main() {
 
 	}
 
-
 	int groupNr = 0;
 	bool lessthan = false; // if p2 is lower in any dimension than p1, it is not a valid rectangle
 
 	for (int n = 0; n < 4; n++) { //for each of the four transistor networks
+		
+		if (n == 0) cout << "\nBuilding the 0.9V pull-up circuit...\n";
+		if (n == 1) cout << "\nBuilding the 0.9V pull-down circuit...\n";
+		if (n == 2) cout << "\nBuilding the 0.45V pull-up circuit...\n";
+		if (n == 3) cout << "\nBuilding the 0.45V pull-down circuit...\n";
+
 		groupNr = 0;
 		for (int f = 0; f < truthtable.size(); f++) {
 			fill(groups[f].begin(), groups[f].end(), '0');
@@ -192,7 +223,7 @@ int main() {
 							bool covered = true;
 
 							for (int g = 0; g < groupNr; g++) {				// check if a group would be covered by the next group, and overwrite it if it does 
-								//NOTE: This can overwrite multiple groups, resulting in duplicate groups
+																			//NOTE: This can overwrite multiple groups, resulting in duplicate groups
 								covered = true;
 								for (int c = 0; c < p2; c++) {
 									if ((groups[g][c] == '1') && (mask[c] == '0')) {
@@ -231,11 +262,11 @@ int main() {
 										groups[groupNr][j] = mask[j];
 									}
 									groupNr += 1;
+									cout << ".";
 								}
 							}
 
 						}
-
 					}
 				}
 			}
@@ -323,7 +354,7 @@ int main() {
 
 				}
 				//else if (n == 3) {
-					// don't need this one
+				// don't need this one
 				//}
 			}
 		}
@@ -359,16 +390,30 @@ int main() {
 
 	}
 
+
+	/* NOTE:
+	The circuit can be optmized further at this point.
+	For example, if two transistors of the same type and input in the same network are both connected to vdd on one side, they can be merged.
+	The spaces along VDD, GND, OUT can hold mergings, which then produces sub-spaces for further merging.
+	This optimization was not implemented here, and we leave it as a challenge to you to figure out.
+	(the order of transistors in each branch can be swapped around for maximum optimization)
+	*/
+
+
+
+
+
+
 	cout << "\n\n final circuit truthtable: \n";
 
 	for (int i = 0; i < truthtable.size(); i++) {
 		if (i % 3 == 0) cout << "\n";
-		//if (i % 9 == 0) cout << "\n\n";
-		//if (i % 27 == 0) cout << "\n\n\n";
+		if (i % 9 == 0) cout << "\n";
+		if (i % 27 == 0) cout << "\n";
 		cout << truthtable[i];
 	}
 
-
+	// THE BASE-27 HEPTAVINTIMAL NOTATION
 	// 000 001 002 010 011 012 020 021 022 100 101 102 110 111 112 120 121 122 200 201 202 210 211 212 220 221 222
 	//  0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F	G	H	K	M	N	P	R	T	V	X	Z
 	string index = "";
@@ -377,7 +422,7 @@ int main() {
 		hept = truthtable[i];
 		hept += truthtable[i - 1];
 		hept += truthtable[i - 2];
-		if		(hept == "000") { index += "0"; }
+		if (hept == "000") { index += "0"; }
 		else if (hept == "001") { index += "1"; }
 		else if (hept == "002") { index += "2"; }
 		else if (hept == "010") { index += "3"; }
@@ -407,33 +452,35 @@ int main() {
 
 	}
 
-	cout << "\nfunction index: " << index;
+	cout << "\nheptavintimal function index: " << index;
 	cout << "\n\n";
 
-	/* TO OPTIMIZE THE CIRCUIT BY SHARING TRANSISTORS:
-	you first find the letter which is the most common
-	(a letter can only appear once per column)
-	and you put that on top (like with A in the example)
-	then you find the letter that's 2nd most common
-	and you put that on the bottom
-	and THEN amongst the ones with an A (or without A if they are more common), find the 3rd most common letter, and do another branching under A,
-	then the same for above B
-	repeat until all the letters are covered
-	in other words, group the most common input in the largest available space.
-	all of vdd starts as one space, as well as gnd
-	up, down, and out/out are four other spaces.
-	6 starting spaces. sharing an input will create a sub-space.
-
-	WHAT IS THE BEST WAY TO DO THIS, MATHEMATICALLY?
-	*/
 
 
-	cout << "\n Writing to file...\n";
 
-	string filename = "f_";
-	for (int i = 0; i < (int(pow(3, dimensions - 1))) - index.length(); i++) { filename += "0"; }
-	filename += index;
-	//filename += ".sp";
+	
+	if (dimensions>4)cout << "Custom filename is recommended for high-arity functions\n";
+	cout << "Would you like to use the index as the filename? (y/n): ";
+	char nameyn = 'n';
+	cin.ignore(100000, '\n');
+	cin >> nameyn;
+	string filename;
+	if (nameyn == 'y') {
+		filename = "f_";
+		for (int i = 0; i < (int(pow(3, dimensions - 1))) - index.length(); i++) { filename += "0"; }
+		filename += index;
+	} else {
+		cout << "Enter the filename: ";
+		cin >> filename;
+	}
+	
+	
+
+	if (_mkdir("./functions") == 0){
+		printf("Directory './functions' was successfully created\n");
+	} //else printf("Problem creating directory './functions'\n");
+
+
 	ofstream myfile;
 	string path = "functions/";
 	path += filename;
@@ -459,11 +506,8 @@ int main() {
 
 
 	myfile << ".subckt " << filename << " "; //<< " i0 i0_p i0_n i1 i1_p i1_n out vdd\n"; // circuit relies on external PTI and NTI
-	
-
-
-			// CREATING THE SUBCIRCUIT INTERFACE. will only require PTI and NTI when necessary
-		for (int i = 0; i < dimensions; i++) {
+											 // CREATING THE SUBCIRCUIT INTERFACE. will only require PTI and NTI when necessary
+	for (int i = 0; i < dimensions; i++) {
 
 		bool bI = false;
 		bool bIP = false;
@@ -495,16 +539,14 @@ int main() {
 
 			}
 		}
-		
-
 		if (bI) myfile << "i" << i << " ";
 		if (bIP) myfile << "i" << i << "_p ";
 		if (bIN) myfile << "i" << i << "_n ";
-
 	}
-	
-	
-	myfile << "out vdd\n"; // end of inputs/outputs
+
+	myfile << "out vdd\n"; // end of inputs/outputs interface
+
+
 
 	myfile << "\n\nxp0 up out out" << p0;
 	myfile << "\nxn1 out out down" << n0 << "\n";
@@ -517,7 +559,7 @@ int main() {
 	string connect3 = "foobar";
 	string out = "out";
 	string vsource = "vdd";
-	// PRINT
+
 	for (int n = 0; n < 4; n++) {
 
 
@@ -652,7 +694,7 @@ int main() {
 	myfile << "\n\n.ends\n\n";
 	myfile.close();
 
-	cout << "\n\n Circuit outputted into " << filename << ".sp\n\n";
+	cout << "\n\n Circuit outputted into functions/" << filename << ".sp\n\n";
 
 
 	system("pause");
@@ -661,14 +703,6 @@ int main() {
 	return 0;
 }
 
-
-
-// TO DO:
-// - Write transistor-sharing optimization
-// - Figure out the magic numbers
-// - Optimize the vector sizes if possible
-
-// CLEAN THE INPUTS!! never trust the user!
 
 
 
