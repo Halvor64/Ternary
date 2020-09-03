@@ -1,40 +1,40 @@
 
+// Written by Halvor Nybø Risto for a student short paper for SIMS 2020
+// Research group website: http://www.ternaryresearch.com/
+
+// GPL-3 license
+
 
 
 
 using namespace std;
+
 #include <iostream>
 #include <vector>
 #include <math.h>
 #include <fstream>
 #include <string>
-
+#include <algorithm> 
+#include <functional>
+#include <cctype>
 #include <direct.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 
-
 vector<char> truthtable;	//the truthtable for the entire circuit
 vector<char> tempVect;
 vector<vector<char>> networks;	// the four truth tables, pull-up and pull-down networks for 0.9v and 0.45v 
-
 vector<char> upvddgnd;		//network[0][x]
 vector<char> downvddgnd;	//network[1][x]
 vector<char> uphalfvdd;		//network[2][x]
 vector<char> downhalfvdd;	//network[3][x]
-
-
 vector<vector<vector<string>>> circuit;	//network, group, series. The transistor types and their connections are encoded in this vector
-
-
 vector<char> mask;	// the rectangular groupings are first generated here, then compared to the truthtable.
 vector<vector<char>> groups;	//groupnr, values. The valid rectangular groupings are stored here.
 
-
 int dimensions = -1; // the number of inputs
 int maskIndex = 0;
-
 
 
 int dimensionLevel(int index, int dimension) {	//returns the level a specific dimension is for a given index (not its value) NOT ZERO INDEXED
@@ -74,40 +74,30 @@ void drawMask(int p1, int p2) {		// draws an n-dimensional rectangle between two
 	}
 
 	if (error) {
-		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // this means either edge wrapping, or redundant rectangle
-																		 //edge wrapping can be done, but the circuit can be optimized instead by transistor grouping
+		cout << "\nError: one of p2's dimensions is lower than p1's.\n"; // The starting corner of the rectangle must be smaller in all dimensions compared to the end corner
+																		 
 	}
 	else {
-		maskRecurs(dimensions, p1, p2);
+		maskRecurs(dimensions, p1, p2); // calls the recursive function to draw the rectangle in the mask vector
 	}
 }
 
 int main() {
 
-
-
-
-
-
 	cout << "\nEnter the function arity(number of inputs, 1~7): ";
 	cin >> dimensions;
-	while (!((dimensions < 11) && (dimensions > 0)) || cin.fail()) {
+	while (!((dimensions < 8) && (dimensions > 0)) || cin.fail()) {		// Higher arities are possible but not recommended
 		cout << "\nEnter the function arity(number of inputs, 1~7): ";
 		cin.clear();
 		cin.ignore(256, '\n');
 		cin >> dimensions;
-
 	} 
 
-
-
-
-
-	int mysteryNumber = dimensions * dimensions * 100;//dimensions * 1000;		// THIS NEEDS TO BE HIGHER TO ALLOW HIGHER ARITIES... OBVIOUSLY IT'S GROWING EXPONENTIALLY, NOT LINEARLY, WITH ARITY (more so than this)
-	int mysteryExponent = 1.64;					// FIX THIS
+	int mysteryNumber = dimensions * dimensions * 100;//dimensions * 1000;	// This number must be higher for more inputs. Program will crash if it is too low. Must be higher than number of groups found.
+	int mysteryExponent = 1.64;		// NOTE: The author is not happy with the use of these mystery numbers. However it will do for now.
 
 	cout << "\ngenerating vectors...\n";
-	circuit.resize(4, vector<vector<string> >(mysteryNumber, vector<string>(dimensions)));
+	circuit.resize(4, vector<vector<string>>(mysteryNumber, vector<string>(dimensions)));
 
 	for (int i = 0; i < pow(3, dimensions); i++) {
 		truthtable.push_back('0');
@@ -119,25 +109,93 @@ int main() {
 		networks[3].push_back('0');
 		mask.push_back('0');
 
-
-		groups.resize(int(pow(pow(3, dimensions), mysteryExponent))); // this is a bit of a problem. for high number of dimensions it becomes massive.. 
-		for (int j = 0; j < int(pow(pow(3, dimensions), mysteryExponent)); j++) {  //CAN IT BE DONE WITHOUT BEING SO EXPONENTIAL??
+		groups.resize(int(pow(pow(3, dimensions), mysteryExponent)));
+		for (int j = 0; j < int(pow(pow(3, dimensions), mysteryExponent)); j++) {  
 			groups[j].push_back('0');
 		}
 	}
 
-	for (int i = 0; i < pow(3, dimensions); i++) {
-		truthtable[i] = 'y';
-		while (truthtable[i] != '0' && truthtable[i] != '1' && truthtable[i] != '2' && truthtable[i] != 'x') {
-			cout << "Enter the function output (0,1,2,x) when ";
-			for (int j = 1; j < dimensions + 1; j++) {
-				cout << "i" << j << " = " << dimensionLevel(i, j) << " ";
+	char indexyn;
+	cout << "\nWould you like to generate the circuit from an index? (y/n): ";
+	cin >> indexyn;
+	string index = "";
+	if (indexyn == 'y') {
+		bool valid = false;
+		while (!valid) {
+			valid = true;
+			cout << "\nEnter the index ("<< truthtable.size()/3 <<" characters) : ";
+			cin >> index;
+			transform(index.begin(), index.end(), index.begin(), ptr_fun<int, int>(toupper)); // converting to uppercase
+
+			for (int i = 0; i < truthtable.size() - 2; i = i + 3) { //checking if the index is valid
+				
+				string base27 = "0123456789ABCDEFGHKMNPRTVXZ";
+				bool lettervalid = false;
+				for (int j = 0; j < 27; j++) {							// if a letter in the index is not found in base27, the index is not valid.
+					if (index[i/3] == base27[j]) lettervalid = true;
+				}
+				if (!lettervalid) {
+					cout << "\n" << index[i / 3] << " is not a valid heptavintimal character!\nThe valid characters are " << base27 << "\n";
+					valid = false;
+				}
 			}
-			cin >> truthtable[i];
 		}
-		
+
+		for (int i = 0; i < index.length(); i++) {
+			// THE BASE-27 HEPTAVINTIMAL NOTATION
+			// 000 001 002 010 011 012 020 021 022 100 101 102 110 111 112 120 121 122 200 201 202 210 211 212 220 221 222
+			//  0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F	G	H	K	M	N	P	R	T	V	X	Z
+
+			// converts the inputted index to truthtable values, starting from lower significance
+			if (index[index.length() - i - 1] == '0') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '1') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '2') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '3') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '4') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '5') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '6') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '7') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '8') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '0'; }
+			if (index[index.length() - i - 1] == '9') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'A') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'B') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'C') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'D') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'E') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'F') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'G') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'H') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '1'; }
+			if (index[index.length() - i - 1] == 'K') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'M') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'N') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '0'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'P') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'R') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'T') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '1'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'V') { truthtable[i * 3] = '0'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'X') { truthtable[i * 3] = '1'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '2'; }
+			if (index[index.length() - i - 1] == 'Z') { truthtable[i * 3] = '2'; truthtable[i * 3 + 1] = '2'; truthtable[i * 3 + 2] = '2'; }
+
+		}
+
+	}
+	else {
+		// takes inputs for each truthtable value
+		for (int i = 0; i < pow(3, dimensions); i++) {
+			truthtable[i] = 'y';
+			while (truthtable[i] != '0' && truthtable[i] != '1' && truthtable[i] != '2' && truthtable[i] != 'x') {
+				cout << "Enter the function output (0,1,2,x) when ";
+				for (int j = 1; j < dimensions + 1; j++) {
+					cout << "i" << j << " = " << dimensionLevel(i, j) << " ";
+				}
+				cin >> truthtable[i];
+			}
+
+		}
 	}
 
+
+
+	// generates the truthtables for the 4 transistor networks based on the full truthtable
 	for (int i = 0; i < truthtable.size(); i++) {
 
 		if (truthtable[i] == 'x') {
@@ -167,7 +225,7 @@ int main() {
 	}
 
 
-	fill(truthtable.begin(), truthtable.end(), '0');
+	fill(truthtable.begin(), truthtable.end(), '0'); // empties the full truthtable for later use
 
 
 	for (int n = 0; n < 4; n++) {
@@ -176,7 +234,6 @@ int main() {
 			if (i % 3 == 0) cout << "\n";
 			if (i % 9 == 0) cout << "\n\n";
 			cout << networks[n][i];
-
 		}
 
 	}
@@ -184,8 +241,9 @@ int main() {
 	int groupNr = 0;
 	bool lessthan = false; // if p2 is lower in any dimension than p1, it is not a valid rectangle
 
-	for (int n = 0; n < 4; n++) { //for each of the four transistor networks
-		
+	for (int n = 0; n < 4; n++) { 
+	// For each of the 4 network, a set of optimal groupings of 1s are found. 
+	// Each grouping represents a transistor-path towards the output.
 		if (n == 0) cout << "\nBuilding the 0.9V pull-up circuit...\n";
 		if (n == 1) cout << "\nBuilding the 0.9V pull-down circuit...\n";
 		if (n == 2) cout << "\nBuilding the 0.45V pull-up circuit...\n";
@@ -338,7 +396,7 @@ int main() {
 		}
 
 
-		// reconstructing the truthtable (if it had x's in it to begin with, it don't anymore!)
+		// reconstructing the final full truthtable (if it had x's in it to begin with, it don't anymore!)
 		for (int i = 0; i < truthtable.size(); i++) {
 			if (tempVect[i] == '1') {
 				if (n == 0) {
@@ -354,7 +412,7 @@ int main() {
 
 				}
 				//else if (n == 3) {
-				// don't need this one
+				// don't need this one, it's covered by the others
 				//}
 			}
 		}
@@ -365,9 +423,9 @@ int main() {
 			for (int d = 0; d < dimensions; d++) {
 
 				bool cut = true;
-				string transType = "111";
-
-
+				string transType = "111"; //transtype represents the types of transistors. For example, "100" is open for low voltage, but not for medium or high
+											// "010" is a connection of "110" and "011" in series
+				// the circuit is build by covering every group with the use of these transistor types
 				for (int L = 0; L < 3; L++) {
 					for (int i = 0; i < truthtable.size(); i++) {
 						if (dimensionLevel(i, d + 1) == L) {
@@ -381,10 +439,7 @@ int main() {
 					}
 					else cut = true;
 				}
-				//cout << "\n\nGroup: " << g << "\nDimension: " << d << "\ntrans: " << transType;
 				circuit[n][g][d] = transType;
-				//cout << "\ncircuit[n][g][d]: " << circuit[n][g][d];
-				//system("pause");
 			}
 		}
 
@@ -393,15 +448,13 @@ int main() {
 
 	/* NOTE:
 	The circuit can be optmized further at this point.
-	For example, if two transistors of the same type and input in the same network are both connected to vdd on one side, they can be merged.
+	If two transistors of the same type and input in the same network are both connected to vdd on one side, they can be merged.
 	The spaces along VDD, GND, OUT can hold mergings, which then produces sub-spaces for further merging.
-	This optimization was not implemented here, and we leave it as a challenge to you to figure out.
+	This optimization was not implemented here.
 	(the order of transistors in each branch can be swapped around for maximum optimization)
+	high-arity functions can be optimized more than low-arity functions
+	(The high arity functions are highly unoptimized in this synthesizer)
 	*/
-
-
-
-
 
 
 	cout << "\n\n final circuit truthtable: \n";
@@ -416,9 +469,9 @@ int main() {
 	// THE BASE-27 HEPTAVINTIMAL NOTATION
 	// 000 001 002 010 011 012 020 021 022 100 101 102 110 111 112 120 121 122 200 201 202 210 211 212 220 221 222
 	//  0	1	2	3	4	5	6	7	8	9	A	B	C	D	E	F	G	H	K	M	N	P	R	T	V	X	Z
-	string index = "";
+	index = "";
 	string hept;
-	for (int i = truthtable.size() - 1; i > 0; i -= 3) {
+	for (int i = truthtable.size() - 1; i > 0; i -= 3) { // the heptavintimal function index is generated
 		hept = truthtable[i];
 		hept += truthtable[i - 1];
 		hept += truthtable[i - 2];
@@ -456,9 +509,6 @@ int main() {
 	cout << "\n\n";
 
 
-
-
-	
 	if (dimensions>4)cout << "Custom filename is recommended for high-arity functions\n";
 	cout << "Would you like to use the index as the filename? (y/n): ";
 	char nameyn = 'n';
@@ -502,13 +552,9 @@ int main() {
 
 
 
-
-
-
 	myfile << ".subckt " << filename << " "; //<< " i0 i0_p i0_n i1 i1_p i1_n out vdd\n"; // circuit relies on external PTI and NTI
-											 // CREATING THE SUBCIRCUIT INTERFACE. will only require PTI and NTI when necessary
-	for (int i = 0; i < dimensions; i++) {
-
+											
+	for (int i = 0; i < dimensions; i++) {	 // CREATING THE SUBCIRCUIT INTERFACE. will only require PTI and NTI when necessary
 		bool bI = false;
 		bool bIP = false;
 		bool bIN = false;
@@ -546,19 +592,17 @@ int main() {
 
 	myfile << "out vdd\n"; // end of inputs/outputs interface
 
-
-
 	myfile << "\n\nxp0 up out out" << p0;
 	myfile << "\nxn1 out out down" << n0 << "\n";
 	int connections = 0; //counts number of connection nodes
 	int transistors = 2; //counts number of transistors
 
 
-	string connect1 = "foobar";
-	string connect2 = "foobar";
-	string connect3 = "foobar";
-	string out = "out";
-	string vsource = "vdd";
+	string connect1 = ""; // connection variables (these depend on the network and group number)
+	string connect2 = "";
+	string connect3 = "";
+	string out = "";		// the connection to the output (out, up, down)
+	string vsource = "";	// the first connection (gnd, vdd)
 
 	for (int n = 0; n < 4; n++) {
 
@@ -587,7 +631,7 @@ int main() {
 
 
 		for (int g = 0; g < mysteryNumber; g++) {
-
+			// the first and last groups to be implemented indicates when the connections should be at vsource and out
 			// in circuit[n][g][d], what number d is the first and last valid one? (empty, 111, 000 are not valid)
 			int firstDimension = -1;
 			int lastDimension = 0;
@@ -601,12 +645,10 @@ int main() {
 				}
 			}
 
-
 			for (int d = 0; d < dimensions; d++) {
 				if (!circuit[n][g][d].empty() && circuit[n][g][d] != "000" && circuit[n][g][d] != "111") {
 
-
-
+					// connection variables are defined
 					if (d == firstDimension) {
 						myfile << "\n";
 						connect1 = vsource;
@@ -615,7 +657,6 @@ int main() {
 						connect1 = 'p' + to_string(connections);
 						connections += 1;
 					}
-
 
 					if (d == lastDimension) {
 						if (circuit[n][g][d] == "010") {
@@ -636,7 +677,7 @@ int main() {
 						}
 					}
 
-
+					// circuit is built using the "transistor types" in the circuit vector and the connection variables
 					if (n % 2 == 0) {
 						if (circuit[n][g][d] == "100") {	// small ptype I
 							myfile << "\nxp" << transistors << " " << connect1 << " i" << d << " " << connect2 << p1;
@@ -696,8 +737,8 @@ int main() {
 
 	cout << "\n\n Circuit outputted into functions/" << filename << ".sp\n\n";
 
-
 	system("pause");
+	
 
 
 	return 0;
