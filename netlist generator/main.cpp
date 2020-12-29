@@ -20,7 +20,7 @@ class Connection {
 class Subcircuit {
     string connections[4];    //interface connections i0, i1, i2, out
     //bool ap, an, bp, bn, cp, cn; //subcircuit interface
-    bool inverters[6];
+    bool inverters[9];
     string index;
     int arity;
 public:
@@ -29,7 +29,7 @@ public:
     void setIndex(string indx) { index = indx; };
     void setArity(int arty) { arity = arty; }
     string getConnection(int i) { return connections[i]; }
-    bool getInverter(int i) {return inverters[i]; }
+    bool getInverter(int i) { return inverters[i]; }
     string getIndex() { return index; }
     int getArity() { return arity; }
 };
@@ -47,23 +47,27 @@ void::Subcircuit::setInverters(int i, bool x) {
 
 ///////////////////////////////// DATA
 vector<vector<string>> connections = {
-    {"in0", "in1", "", "out_ckt0"}  ,    //sum 2 inputs
-    {"out_ckt0", "in2", "", "out0"},    //sum 2 inputs
-    {"in0", "in1", "in2", "out1"}, //carry 3 inputs
+    {"in0", "in1", "", "out_ckt0"}  ,       //20K
+    {"out_ckt0", "in2", "", "out0"}  ,      //20K
+    {"in0", "in1", "", "out_ckt2"},         //K00
+    {"out_ckt0", "in2", "", "out_ckt3"},    //K00
+    {"out_ckt2", "out_ckt3", "", "out2"},   //ZKK
 };
 
 vector<vector<bool>> inv = {
-    {true,true,true,true,true,true,false,false,false},
-    {true,true,true,true,true,true,false,false,false},
-    {true,true,true,true,true,true,true,true,true}
-
+    {true,true,false,true,true,false,false,false,false},
+    {true,true,false,true,true,false,false,false,false},
+    {false,true,false,false,true,false,false,false,false},
+    {false,true,false,false,true,false,false,false,false},
+    {false,true,false,false,true,false,false,false,false}
 };
+
 
 vector<string> index = {
-    "7PB", "7PB", "XRDRDCDC9"
+    "20K", "20K", "K00", "K00", "ZKK"
 };
 
-vector<int> arity = { 2,2,3 };
+vector<int> arity = { 2,2,2,2,2 };
 ///////////////////////////////// DATA
 
 
@@ -72,7 +76,7 @@ vector<Subcircuit> netlists;
 
 void enterData() {
     for (int i = 0; i < connections.size(); i++) {
-        
+
         netlists[i].setIndex(index[i]);
         netlists[i].setArity(arity[i]);
         // entering connection data
@@ -95,8 +99,8 @@ void printData() {
         cout << "\nobject nr " << i << endl;
         cout << "subcircuit interface: \n";
 
-        for (int j = 0; j < 6; j++) {
-            cout << netlists[i].getInverter(j);
+        for (int j = 0; j < 9; j++) {
+            cout << netlists[i].getInverter(j) << " ";
         }
         cout << endl;
         for (int j = 0; j < connections[i].size(); j++) {
@@ -118,10 +122,12 @@ int main() {
     //vector<Subcircuit> netlists;
     netlists.resize(connections.size());
 
+
+
     enterData();
     printData();
-    
-    
+
+
 
     ofstream myfile;
     //string path = "functions/";
@@ -139,52 +145,61 @@ int main() {
     }
     myfile << " vdd\n";
 
+    vector<string> includedIndex;
+
     for (int i = 0; i < netlists.size(); i++) {
-        myfile << ".include \"f_" << netlists[i].getIndex() <<".sp\"" << endl;
+        if (find(includedIndex.begin(), includedIndex.end(), netlists[i].getIndex()) == includedIndex.end())   {
+
+            myfile << ".include \"f_" << netlists[i].getIndex() << ".sp\"" << endl;
+            includedIndex.push_back(netlists[i].getIndex());
+        }
+        
     }
     myfile << ".include \"nti.sp\" \n.include \"pti.sp\"\n\n";
 
     vector<string> usedInverters;
-
+    int inverterCount = 0;
     for (int i = 0; i < netlists.size(); i++) {
-        
-        for (int j = 0; j < (netlists[i].getArity() * 2); j++) {
-            if (netlists[i].getInverter(j)) {
-                if (j % 2 == 0) {
 
-                    string addInverter = connections[i][j / 2] + "_p";
-                    if (!(find(usedInverters.begin(), usedInverters.end(), addInverter) != usedInverters.end())) {
-                        myfile << "xpti " << connections[i][j / 2] << " " <<
+        for (int j = 0; j < (netlists[i].getArity() * 3); j++) {
+            if (netlists[i].getInverter(j)) {
+                if (j % 3 == 1) {
+
+                    string addInverter = connections[i][(j - 1) / 3] + "_p";
+                    if (find(usedInverters.begin(), usedInverters.end(), addInverter) == usedInverters.end()) {
+                        myfile << "xpti" << inverterCount << " " << connections[i][(j - 1) / 3] << " " <<
                             addInverter << " vdd pti" << endl;
+                        inverterCount++;
                         usedInverters.push_back(addInverter);
                     }
                 }
-                else {
-                    string addInverter = connections[i][(j - 1) / 2] + "_n";
-                    if (!(find(usedInverters.begin(), usedInverters.end(), addInverter) != usedInverters.end())) {
-                        myfile << "xnti " << connections[i][(j - 1) / 2] << " " <<
+                else if (j % 3 == 2) {
+                    string addInverter = connections[i][(j - 2) / 3] + "_n";
+                    if (find(usedInverters.begin(), usedInverters.end(), addInverter) == usedInverters.end()) {
+                        myfile << "xnti" << inverterCount << " " << connections[i][(j - 2) / 3] << " " <<
                             addInverter << " vdd nti" << endl;
+                        inverterCount++;
                         usedInverters.push_back(addInverter);
                     }
                 }
             }
         }
-        
+
         myfile << "\nxckt" << i << " ";
         for (int j = 0; j < 4; j++) {
             if (j < 3) {
                 if (netlists[i].getInverter(j * 3)) {
                     myfile << connections[i][j] << " ";
                 }
-                if (netlists[i].getInverter(j * 3 + 1)) {
+                if (netlists[i].getInverter((j * 3) + 1)) {
                     myfile << connections[i][j] << "_p ";
                 }
-                if (netlists[i].getInverter(j * 3 + 2)) {
+                if (netlists[i].getInverter((j * 3) + 2)) {
                     myfile << connections[i][j] << "_n ";
                 }
             }
         }
-        myfile << "vdd "<< "f_" << netlists[i].getIndex() <<"\n\n";
+        myfile << connections[i][3]<<" vdd " << "f_" << netlists[i].getIndex() << "\n\n";
 
     }
 
@@ -197,34 +212,5 @@ int main() {
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
