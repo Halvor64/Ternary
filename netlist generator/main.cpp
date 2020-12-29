@@ -53,9 +53,9 @@ vector<vector<string>> connections = {
 };
 
 vector<vector<bool>> inv = {
-    {true,true,true,true,false,false},
-    {true,true,true,true,false,false},
-    {true,true,true,true,true,true}
+    {true,true,true,true,true,true,false,false,false},
+    {true,true,true,true,true,true,false,false,false},
+    {true,true,true,true,true,true,true,true,true}
 
 };
 
@@ -172,12 +172,14 @@ int main() {
         
         myfile << "\nxckt" << i << " ";
         for (int j = 0; j < 4; j++) {
-            myfile << connections[i][j] << " ";
             if (j < 3) {
-                if (netlists[i].getInverter(j * 2)) {
+                if (netlists[i].getInverter(j * 3)) {
+                    myfile << connections[i][j] << " ";
+                }
+                if (netlists[i].getInverter(j * 3 + 1)) {
                     myfile << connections[i][j] << "_p ";
                 }
-                if (netlists[i].getInverter(j * 2 + 1)) {
+                if (netlists[i].getInverter(j * 3 + 2)) {
                     myfile << connections[i][j] << "_n ";
                 }
             }
@@ -185,6 +187,8 @@ int main() {
         myfile << "vdd "<< "f_" << netlists[i].getIndex() <<"\n\n";
 
     }
+
+
 
 
 
